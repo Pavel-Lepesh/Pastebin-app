@@ -1,12 +1,16 @@
 import boto3
 import uuid
 from botocore.client import Config
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 ENDPOINT = "https://s3.ru-1.storage.selcloud.ru"
 
-ACCESS_KEY = "8e74b075d0624260bbc60d1e34ad9068"
-SECRET_KEY = "a4d25d1abdc4401ca7d2cf3d756a748e"
+ACCESS_KEY = os.getenv('ACCESS_KEY')
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 session = boto3.Session(
         aws_access_key_id=ACCESS_KEY,

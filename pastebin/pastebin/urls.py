@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 from api.views import NoteAPIView, LinkAPIView, RetrieveNoteAPIView, RetrieveKey
+from hash_generator.views import StartGenerate
 from rest_framework import routers
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path('<str:pk>', RetrieveNoteAPIView.as_view()),
     path('redis/<str:pk>/', RetrieveKey.as_view()),
     path('admin/', admin.site.urls),
+    path('start-generate/', StartGenerate.as_view()),
     path('api/v1/', include(router.urls)),
     path('api/v1/notes/', LinkAPIView.as_view({'get': 'list', 'post': 'create'})),
     path('api/v1/notes/<int:pk>/', LinkAPIView.as_view({'get': 'retrieve', 'delete': 'destroy'})),

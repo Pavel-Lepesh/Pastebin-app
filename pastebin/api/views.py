@@ -5,9 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.authentication import TokenAuthentication
 from django.shortcuts import get_object_or_404
-from django.core.cache import cache
-#from django.utils.decorators import method_decorator
-#from django.views.decorators.cache import cache_page
+from django.core.cache import caches
+from django.db.utils import IntegrityError
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema
 from .serializers import NoteSerializer, LinkSerializer
 from .models import Note
@@ -15,9 +16,11 @@ import requests
 
 
 class RetrieveKey(RetrieveAPIView):
+    @method_decorator(cache_page(600))
     def retrieve(self, request, *args, **kwargs):
-        pk = str(kwargs['pk'])
-        item = cache.get(pk)
+        redis_cache = caches['redis']
+        pk = kwargs['pk']
+        item = redis_cache.get(pk)
         return Response({'get': item})
 
 
@@ -58,12 +61,20 @@ class LinkAPIView(ViewSet):
 
     @extend_schema(request=LinkSerializer, responses=LinkSerializer)
     def create(self, request):
-        request.data._mutable = True
+        request.data._mutable = True  # для того чтобы можно было изменять данные
         request.data.update({'user': request.user.id})
-        serializer = LinkSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.validated_data)
+
+        while True:
+            try:
+                serializer = LinkSerializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                break
+            except IntegrityError:
+                # возможно стоит поставить лог
+                continue
+
+        return Response({'data': serializer.validated_data})
 
     @extend_schema(responses=NoteSerializer)
     def destroy(self, request, pk=None):

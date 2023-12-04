@@ -11,9 +11,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env()
 
 
 # Quick-start development settings - unsuitable for production
@@ -38,11 +41,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api.apps.ApiConfig',
+    'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
     'drf_spectacular',
     'rest_framework.authtoken',
     'djoser',
     'redisboard',
+    'celery',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -149,11 +155,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 CACHES = {
-    # 'default': {
-    #     'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-    #     'LOCATION': '127.0.0.1:11211',
-    # },
     'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        'LOCATION': '127.0.0.1:11211',
+    },
+    'redis': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379',
         'OPTIONS': {
@@ -162,3 +168,9 @@ CACHES = {
         }
     },
 }
+
+REDIS_HOST = 'localhost'
+REDIS_PORT = '6379'
+BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/1'
+BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
+CELERY_RESULT_BACKEND = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/1'
