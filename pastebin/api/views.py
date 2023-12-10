@@ -1,68 +1,68 @@
 from rest_framework.response import Response
-from rest_framework.generics import RetrieveAPIView
-from rest_framework.viewsets import ViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import ViewSet, GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.authentication import TokenAuthentication
+from rest_framework import mixins, status
 from django.shortcuts import get_object_or_404
-from django.core.cache import caches
 from django.db.utils import IntegrityError
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import extend_schema
 from .serializers import NoteSerializer, LinkSerializer
 from .models import Note
-import requests
+from .s3_storage import s3_storage
+from botocore.exceptions import ClientError
+import uuid
 
 
-class RetrieveKey(RetrieveAPIView):
-    @method_decorator(cache_page(600))
-    def retrieve(self, request, *args, **kwargs):
-        redis_cache = caches['redis']
-        pk = kwargs['pk']
-        item = redis_cache.get(pk)
-        return Response({'get': item})
-
-
-class RetrieveNoteAPIView(RetrieveAPIView):
+class URLNoteAPIView(mixins.RetrieveModelMixin,
+                          mixins.UpdateModelMixin,
+                          mixins.DestroyModelMixin,
+                          GenericViewSet):
     queryset = Note.objects.all()
+    parser_classes = (MultiPartParser, JSONParser)
 
     def retrieve(self, request, *args, **kwargs):
         item = get_object_or_404(self.get_queryset(), hash_link=kwargs['pk'])
-        content = requests.get(item.link).text
-
+        content = s3_storage.get_object_content(str(item.key_for_s3))
         return Response({'content': content})
 
+    def update(self, request, *args, **kwargs):
+        item = get_object_or_404(self.get_queryset(), hash_link=kwargs['pk'])
+        serializer = LinkSerializer(instance=item, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-class NoteAPIView(ReadOnlyModelViewSet):
-    serializer_class = NoteSerializer
-    queryset = Note.objects.all()
+        return Response({'data': serializer.validated_data})
+
+    def destroy(self, request, pk=None):
+        item = get_object_or_404(self.get_queryset(), hash_link=pk)
+        key_for_s3 = str(item.key_for_s3)
+        s3_storage.delete_object(key_for_s3)
+        self.perform_destroy(item)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LinkAPIView(ViewSet):
     parser_classes = (MultiPartParser, JSONParser)
-    permission_classes = (IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
+    #permission_classes = (IsAuthenticated,)
+    #authentication_classes = (TokenAuthentication,)
 
     @extend_schema(request=NoteSerializer, responses=NoteSerializer)
-    #@method_decorator(cache_page(600))
     def list(self, request):
         queryset = Note.objects.filter(user=request.user.id)
         serializer = NoteSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response({'data': serializer.data, 'user': request.user.id})
 
-    @extend_schema(request=NoteSerializer, responses=NoteSerializer)
-    #@method_decorator(cache_page(300))
-    def retrieve(self, request, pk=None):
-        queryset = Note.objects.all()
-        item = get_object_or_404(queryset, pk=pk)
-        serializer = NoteSerializer(item)
-        return Response(serializer.data)
-
-    @extend_schema(request=LinkSerializer, responses=LinkSerializer)
+    #@extend_schema(request=LinkSerializer, responses=LinkSerializer)
     def create(self, request):
         request.data._mutable = True  # для того чтобы можно было изменять данные
         request.data.update({'user': request.user.id})
+        key_for_s3 = str(uuid.uuid4())
+
+        while s3_storage.object_exist(key_for_s3):
+            key_for_s3 = str(uuid.uuid4())
+        request.data.update({'key_for_s3': key_for_s3})
 
         while True:
             try:
@@ -70,16 +70,8 @@ class LinkAPIView(ViewSet):
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 break
-            except IntegrityError:
+            except (IntegrityError, ClientError):
                 # возможно стоит поставить лог
                 continue
 
         return Response({'data': serializer.validated_data})
-
-    @extend_schema(responses=NoteSerializer)
-    def destroy(self, request, pk=None):
-        queryset = Note.objects.all()
-        item = get_object_or_404(queryset, pk=pk)
-        serializer = NoteSerializer(item)
-        item.delete()
-        return Response({'delete': serializer.data})
