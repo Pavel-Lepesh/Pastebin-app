@@ -17,7 +17,7 @@ class HashGenerator:
         self.start_generate()
 
     def start_generate(self):
-        for _ in range(50):
+        for _ in range(500):
             hash_ = json.dumps(secrets.token_urlsafe(8))
 
             key = random.randrange(1, 10000)  # максимум возможных ключей в одно время

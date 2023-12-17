@@ -12,12 +12,13 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-import environ
+from dotenv import load_dotenv
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env()
+load_dotenv()
 
 
 # Quick-start development settings - unsuitable for production
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api.apps.ApiConfig',
+    'accounts.apps.AccountsConfig',
     'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
     'drf_spectacular',
@@ -89,8 +91,12 @@ WSGI_APPLICATION = 'pastebin.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'pastebin',
+        'USER': os.getenv("USER_DB"),
+        'PASSWORD': os.getenv("PASSWORD_DB"),
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 

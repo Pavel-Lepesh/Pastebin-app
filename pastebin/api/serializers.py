@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
-from .models import Note
+from .models import Note, NoteMetaData
 from .s3_storage import s3_storage
 from django.contrib.auth.models import User
 from django.core.cache import caches
@@ -11,7 +11,7 @@ from datetime import timedelta
 class NoteSerializer(ModelSerializer):
     class Meta:
         model = Note
-        fields = ('id', 'title', 'hash_link', 'time_create', 'user')
+        fields = ('title', 'hash_link', 'time_create', 'user')
 
 
 class LinkSerializer(Serializer):
@@ -20,6 +20,7 @@ class LinkSerializer(Serializer):
     user = serializers.IntegerField()
     expiration = serializers.IntegerField(default=3600)
     key_for_s3 = serializers.UUIDField()
+    availability = serializers.CharField()
 
     def create(self, validated_data):
         key_for_s3 = str(validated_data.get('key_for_s3'))
@@ -35,14 +36,17 @@ class LinkSerializer(Serializer):
             'user': User.objects.get(id=validated_data.get('user')),
             'hash_link': hash_link,
             'expiration': expiration,
-            'key_for_s3': key_for_s3
+            'availability': validated_data.get('availability'),
+            'key_for_s3': key_for_s3,
         }
 
         s3_storage.create_or_update_object(content=validated_data.get('content'),
                                            key_for_s3=key_for_s3,
                                            ex=expiration)
 
-        return Note.objects.create(**data)
+        meta_data = NoteMetaData.objects.create()
+
+        return Note.objects.create(meta_data=meta_data, **data)
 
     def update(self, instance, validated_data):
         expiration = timezone.localtime() + timedelta(seconds=validated_data.get('expiration'))

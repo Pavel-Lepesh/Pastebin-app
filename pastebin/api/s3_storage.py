@@ -52,7 +52,6 @@ class S3Storage:
 
     def delete_object(self, key_for_s3):
         self.client.delete_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
-        return True
 
 
 s3_storage = S3Storage()
