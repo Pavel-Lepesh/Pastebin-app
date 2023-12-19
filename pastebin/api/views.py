@@ -5,12 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.authentication import TokenAuthentication
 from rest_framework import mixins, status
+from rest_framework.decorators import action
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
-from .serializers import NoteSerializer, LinkSerializer
-from .models import Note, UserStars
+from .serializers import NoteSerializer, LinkSerializer, CommentSerializer
+from .models import Note, UserStars, Comment, UserCommentRating
 from .s3_storage import s3_storage
 from botocore.exceptions import ClientError
 import uuid
@@ -31,8 +32,7 @@ class UserStars(mixins.RetrieveModelMixin,
         item = get_object_or_404(Note.objects.all(), hash_link=kwargs['hash_link'])
 
         try:
-            userstar = self.queryset.create(user_id=request.user.id, note_id=item.id)
-            userstar.save()
+            self.queryset.create(user_id=request.user.id, note_id=item.id)
         except IntegrityError as error:
             return Response({'message': 'This star is already in your collection'},
                             status=status.HTTP_409_CONFLICT)
@@ -92,9 +92,6 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         s3_storage.delete_object(key_for_s3)
         self.perform_destroy(item)
 
-        if item.meta_data:
-            item.meta_data.delete()
-
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -111,17 +108,16 @@ class LinkAPIView(ViewSet):
 
     #@extend_schema(request=LinkSerializer, responses=LinkSerializer)
     def create(self, request):
-        request.data._mutable = True  # для того чтобы можно было изменять данные
-        request.data.update({'user': request.user.id})
         key_for_s3 = str(uuid.uuid4())
 
         while s3_storage.object_exist(key_for_s3):
             key_for_s3 = str(uuid.uuid4())
-        request.data.update({'key_for_s3': key_for_s3})
 
         while True:
             try:
-                serializer = LinkSerializer(data=request.data)
+                serializer = LinkSerializer(data={'user': request.user.id,
+                                                  'key_for_s3': key_for_s3,
+                                                  **request.data})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 break
@@ -130,3 +126,70 @@ class LinkAPIView(ViewSet):
                 continue
 
         return Response({'data': serializer.validated_data})
+
+
+class NoteComments(mixins.ListModelMixin,
+                   mixins.CreateModelMixin,
+                   mixins.DestroyModelMixin,
+                   GenericViewSet):
+    queryset = Note.objects.all()
+    serializer_class = CommentSerializer
+
+    def list(self, request, *args, **kwargs):
+        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
+        comments = [{'note_comment_id': comment.note_comment_id,
+                     'user': str(comment),
+                     'body': comment.body,
+                     'created': comment.created} for comment in note.comments.all()]
+        return Response({'comments': comments})
+
+    def create(self, request, *args, **kwargs):
+        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
+        note_comment_id = note.comments.count() + 1
+        serializer = self.get_serializer(data={'note': note.id,
+                                               'user': request.user.id,
+                                               'note_comment_id': note_comment_id,
+                                               **request.data})
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
+        comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
+        self.perform_destroy(comment)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'])
+    def rating(self, request, hash_link=None, note_comment_id=None, action_=None, cancel=None):
+        note = get_object_or_404(self.get_queryset(), hash_link=hash_link)
+        comment = get_object_or_404(note.comments, note_comment_id=note_comment_id)
+        user_rating = UserCommentRating.objects.filter(user=request.user, comment=comment)
+
+        if not cancel:
+            if user_rating.exists():
+                return Response({'message': 'You have already rated the comment'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            match action_:
+                case 'like':
+                    comment.meta_data.likes += 1
+                case 'dislike':
+                    comment.meta_data.dislikes += 1
+            UserCommentRating.objects.create(user=request.user,
+                                             comment=comment,
+                                             rating=action_)
+        else:
+            if not user_rating.exists():
+                return Response({'message': 'You have\'t rated the comment yet'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            match action_:
+                case 'like':
+                    comment.meta_data.likes -= 1
+                case 'dislike':
+                    comment.meta_data.dislikes -= 1
+            user_rating.delete()
+
+        comment.meta_data.save()
+        return Response({'rating': {'likes': comment.meta_data.likes,
+                                    'dislikes': comment.meta_data.dislikes}})

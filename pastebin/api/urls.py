@@ -1,10 +1,15 @@
-from django.urls import path
+from django.urls import path, re_path
 from api.views import LinkAPIView, LikePost, UserStars
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView, TokenVerifyView
+from .views import NoteComments
 
 
 urlpatterns = [
+    re_path(r'^comments/(?P<hash_link>[\w-]+)/(?P<note_comment_id>\d+)/(?P<action_>(like|dislike))(?P<cancel>/cancel)?$',
+            NoteComments.as_view({'post': 'rating'})),
+    path('comments/<str:hash_link>', NoteComments.as_view({'get': 'list', 'post': 'create'})),
+    path('comments/<str:hash_link>/<int:note_comment_id>', NoteComments.as_view({'delete': 'destroy'})),
     path('rating/<str:hash_link>', LikePost.as_view()),
     path('mystars/', UserStars.as_view({'get': 'retrieve'})),
     path('mystars/delete/<str:hash_link>', UserStars.as_view({'delete': 'destroy'})),

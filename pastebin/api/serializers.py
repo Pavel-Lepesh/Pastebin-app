@@ -1,11 +1,17 @@
 from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
-from .models import Note, NoteMetaData
+from .models import Note, Comment
 from .s3_storage import s3_storage
 from django.contrib.auth.models import User
 from django.core.cache import caches
 from django.utils import timezone
 from datetime import timedelta
+
+
+class CommentSerializer(ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ('note_comment_id', 'note', 'user', 'body')
 
 
 class NoteSerializer(ModelSerializer):
@@ -44,9 +50,7 @@ class LinkSerializer(Serializer):
                                            key_for_s3=key_for_s3,
                                            ex=expiration)
 
-        meta_data = NoteMetaData.objects.create()
-
-        return Note.objects.create(meta_data=meta_data, **data)
+        return Note.objects.create(**data)
 
     def update(self, instance, validated_data):
         expiration = timezone.localtime() + timedelta(seconds=validated_data.get('expiration'))
