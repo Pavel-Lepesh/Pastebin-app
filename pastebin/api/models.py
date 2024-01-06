@@ -33,6 +33,15 @@ class UserStars(models.Model):
         unique_together = ('user', 'note')
 
 
+class UserLikes(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    note = models.ForeignKey(Note, on_delete=models.CASCADE)
+    like = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'note')
+
+
 class Comment(models.Model):
     note_comment_id = models.IntegerField()
     note = models.ForeignKey(Note, on_delete=models.CASCADE, related_name='comments')

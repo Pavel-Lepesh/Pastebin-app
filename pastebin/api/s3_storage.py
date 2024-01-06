@@ -38,6 +38,7 @@ class S3Storage:
             self.client.head_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
             return True
         except ClientError:
+            # if objects doesn't exist, return false response
             return False
 
     def get_object_content(self, key_for_s3):
@@ -45,6 +46,9 @@ class S3Storage:
         return obj['Body'].read().decode('utf-8')
 
     def create_or_update_object(self, content, key_for_s3, ex: datetime):
+        if not content:
+            content = self.get_object_content(key_for_s3)
+
         self.client.put_object(Bucket=self.BUCKET_NAME,
                                Key=key_for_s3,
                                Body=f'{content}',

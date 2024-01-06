@@ -1,18 +1,18 @@
-from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet, GenericViewSet
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.authentication import TokenAuthentication
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
 from .serializers import NoteSerializer, LinkSerializer, CommentSerializer
-from .models import Note, UserStars, Comment, UserCommentRating
+from .models import Note, UserStars, UserCommentRating, UserLikes
 from .s3_storage import s3_storage
+from .permissions import IsOwnerOrReadOnly
 from botocore.exceptions import ClientError
 import uuid
 
@@ -22,6 +22,7 @@ class UserStars(mixins.RetrieveModelMixin,
                 mixins.CreateModelMixin,
                 GenericViewSet):
     queryset = UserStars.objects.all()
+    permission_classes = (IsAuthenticated,)
 
     def retrieve(self, request, *args, **kwargs):
         user = User.objects.get(id=request.user.id)
@@ -34,7 +35,7 @@ class UserStars(mixins.RetrieveModelMixin,
         try:
             self.queryset.create(user_id=request.user.id, note_id=item.id)
         except IntegrityError as error:
-            return Response({'message': 'This star is already in your collection'},
+            return Response({'message': 'This note is already in your collection'},
                             status=status.HTTP_409_CONFLICT)
 
         item.meta_data.stars += 1
@@ -54,14 +55,48 @@ class UserStars(mixins.RetrieveModelMixin,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class LikePost(GenericAPIView):
+class LikePost(GenericViewSet):
     queryset = Note.objects.all()
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
-    def post(self, request, hash_link):
-        item = get_object_or_404(self.get_queryset(), hash_link=hash_link)
-        item.meta_data.likes += 1
-        item.meta_data.save()
-        return Response({'likes': item.meta_data.likes})
+    def get_object(self):
+        item = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['hash_link'])
+        return item
+
+    def retrieve(self, request, hash_link):
+        item = self.get_object()
+        meta_data = {'views': item.meta_data.views,
+                     'likes': item.meta_data.likes,
+                     'stars': item.meta_data.stars}
+        return Response(meta_data)
+
+    @action(detail=True, methods=['post'])
+    def like(self, request, hash_link):
+        item = self.get_object()
+        user_like = UserLikes.objects.filter(note=item, user=request.user)
+
+        if user_like.exists():
+            return Response({'message': 'You have already liked the note'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        else:
+            item.meta_data.likes += 1
+            item.meta_data.save()
+            UserLikes.objects.create(note=item, user=request.user, like=True)
+            return Response({'likes': item.meta_data.likes})
+
+    @action(detail=True, methods=['post'])
+    def cancel_like(self, request, hash_link):
+        item = self.get_object()
+        user_like = UserLikes.objects.filter(note=item, user=request.user)
+
+        if not user_like.exists():
+            return Response({'message': 'You have\'t liked the note yet'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        else:
+            item.meta_data.likes -= 1
+            item.meta_data.save()
+            user_like.delete()
+            return Response({'likes': item.meta_data.likes})
 
 
 class URLNoteAPIView(mixins.RetrieveModelMixin,
@@ -70,26 +105,52 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
                      GenericViewSet):
     queryset = Note.objects.all()
     parser_classes = (MultiPartParser, JSONParser)
+    permission_classes = (IsOwnerOrReadOnly,)
+
+    def get_object(self):
+        obj = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['pk'])
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def retrieve(self, request, *args, **kwargs):
-        item = get_object_or_404(self.get_queryset(), hash_link=kwargs['pk'])
+        item = self.get_object()
         item.meta_data.views += 1
+
+        if item.meta_data.views >= 10:
+            content = cache.get(item.hash_link)
+            if not content:
+                content = s3_storage.get_object_content(str(item.key_for_s3))
+                cache.set(item.hash_link,
+                          content,
+                          300)
+        else:
+            content = s3_storage.get_object_content(str(item.key_for_s3))
+
         item.meta_data.save()
-        content = s3_storage.get_object_content(str(item.key_for_s3))
         return Response({'content': content})
 
     def update(self, request, *args, **kwargs):
-        item = get_object_or_404(self.get_queryset(), hash_link=kwargs['pk'])
-        serializer = LinkSerializer(instance=item, data=request.data, partial=True)
+        item = self.get_object()
+        serializer = LinkSerializer(instance=item, data={'user': item.user.id,
+                                                         'key_for_s3': item.key_for_s3,
+                                                         **request.data})
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response({'data': serializer.validated_data})
+
+    def partial_update(self, request, *args, **kwargs):
+        serializer = LinkSerializer(instance=self.get_object(), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
         return Response({'data': serializer.validated_data})
 
     def destroy(self, request, *args, **kwargs):
-        item = get_object_or_404(self.get_queryset(), hash_link=kwargs['pk'])
+        item = self.get_object()
         key_for_s3 = str(item.key_for_s3)
         s3_storage.delete_object(key_for_s3)
+        cache.delete(item.hash_link)
         self.perform_destroy(item)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -97,12 +158,11 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
 
 class LinkAPIView(ViewSet):
     parser_classes = (MultiPartParser, JSONParser)
-    #permission_classes = (IsAuthenticated,)
-    #authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
-    @extend_schema(request=NoteSerializer, responses=NoteSerializer)
+    #@extend_schema(request=NoteSerializer, responses=NoteSerializer)
     def list(self, request):
-        queryset = Note.objects.filter(user=request.user.id)
+        queryset = Note.objects.filter(user=request.user.id, availability='public')
         serializer = NoteSerializer(queryset, many=True)
         return Response({'data': serializer.data})
 
@@ -130,16 +190,20 @@ class LinkAPIView(ViewSet):
 
 class NoteComments(mixins.ListModelMixin,
                    mixins.CreateModelMixin,
+                   mixins.UpdateModelMixin,
                    mixins.DestroyModelMixin,
                    GenericViewSet):
     queryset = Note.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
     def list(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
         comments = [{'note_comment_id': comment.note_comment_id,
                      'user': str(comment),
                      'body': comment.body,
+                     'likes': comment.meta_data.likes,
+                     'dislikes': comment.meta_data.dislikes,
                      'created': comment.created} for comment in note.comments.all()]
         return Response({'comments': comments})
 
@@ -153,6 +217,14 @@ class NoteComments(mixins.ListModelMixin,
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, *args, **kwargs):
+        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
+        comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
+        serializer = self.get_serializer(instance=comment, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response({'data': serializer.validated_data})
 
     def destroy(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])

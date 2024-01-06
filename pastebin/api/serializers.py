@@ -53,15 +53,20 @@ class LinkSerializer(Serializer):
         return Note.objects.create(**data)
 
     def update(self, instance, validated_data):
-        expiration = timezone.localtime() + timedelta(seconds=validated_data.get('expiration'))
+        if not validated_data.get('expiration'):  # for patch method
+            expiration = instance.expiration
+        else:
+            expiration = timezone.localtime() + timedelta(seconds=validated_data.get('expiration'))
+
         key_for_s3 = str(instance.key_for_s3)
-        content = validated_data.get('content')
+        content = validated_data.get('content', False)
 
         s3_storage.create_or_update_object(content=content,
                                            key_for_s3=key_for_s3,
                                            ex=expiration)
 
         instance.title = validated_data.get('title', instance.title)
+        instance.availability = validated_data.get('availability', instance.availability)
         instance.expiration = expiration
         instance.save()
 
