@@ -1,8 +1,8 @@
-from .generator import HashGenerator
+from .generator import generator
 from .celery import app
 
 
 @app.task
 def start_generator():
-    HashGenerator().__init__()
+    generator.start_generate()
     return True

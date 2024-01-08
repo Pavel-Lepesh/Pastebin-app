@@ -11,13 +11,14 @@ logging.basicConfig(level=logging.INFO)
 
 class HashGenerator:
     def __init__(self):
-        logging.info('Start generate...')
-        self.redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=False)
-
-        self.start_generate()
+        try:
+            self.redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=False)
+        except ConnectionError as error:
+            logging.error(f'Error initializing HashGenerator: {error}')
 
     def start_generate(self):
-        for _ in range(500):
+        logging.info('Start generate...')
+        for _ in range(5):
             hash_ = json.dumps(secrets.token_urlsafe(8))
 
             key = random.randrange(1, 10000)  # максимум возможных ключей в одно время
@@ -31,3 +32,6 @@ class HashGenerator:
                 break
 
             logging.info(f'New hash: {hash_}')
+
+
+generator = HashGenerator()
