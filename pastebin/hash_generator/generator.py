@@ -1,9 +1,14 @@
 import redis
 import json
+import os
 import logging
 import secrets
 import random
 from redis.exceptions import ConnectionError
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 
 logging.basicConfig(level=logging.INFO)
@@ -12,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 class HashGenerator:
     def __init__(self):
         try:
-            self.redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=False)
+            self.redis_client = redis.StrictRedis(host=os.getenv("REDIS_HOST"), port=6379, decode_responses=False)
         except ConnectionError as error:
             logging.error(f'Error initializing HashGenerator: {error}')
 
@@ -31,7 +36,7 @@ class HashGenerator:
                 logging.info('Stop generate')
                 break
 
-            logging.info(f'New hash: {hash_}')
+        logging.info('Generating completed')
 
 
 generator = HashGenerator()

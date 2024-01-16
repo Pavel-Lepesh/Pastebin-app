@@ -11,7 +11,7 @@ load_dotenv()
 
 class S3Storage:
     def __init__(self):
-        self.ENDPOINT = "https://s3.ru-1.storage.selcloud.ru"
+        self.ENDPOINT = os.getenv('ENDPOINT')
         self.ACCESS_KEY = os.getenv('ACCESS_KEY')
         self.SECRET_KEY = os.getenv('SECRET_KEY')
         self.BUCKET_NAME = os.getenv('BUCKET_NAME')

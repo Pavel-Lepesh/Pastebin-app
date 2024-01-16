@@ -150,7 +150,10 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         item = self.get_object()
         key_for_s3 = str(item.key_for_s3)
         s3_storage.delete_object(key_for_s3)
-        cache.delete(item.hash_link)
+
+        if cache.get(item.hash_link):
+            cache.delete(item.hash_link)
+
         self.perform_destroy(item)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
