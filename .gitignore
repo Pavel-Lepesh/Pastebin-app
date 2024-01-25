@@ -1,3 +1,6 @@
 /venv
 /.idea
 /pastebin/.env
+/pastebin/.env.prod
+/pastebin/requirements.txt
+/requirements.txt

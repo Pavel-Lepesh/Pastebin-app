@@ -15,6 +15,9 @@ def auto_delete_when_expire():
     logging.info('Start checking the expiration of notes...')
     notes = Note.objects.all()
     for note in notes:
+        if not note.expiration:
+            continue
+
         try:
             if note.expiration < datetime.now(pytz.timezone('Europe/Minsk')):
                 if cache.get(note.hash_link):

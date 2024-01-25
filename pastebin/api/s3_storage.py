@@ -49,10 +49,14 @@ class S3Storage:
         if not content:
             content = self.get_object_content(key_for_s3)
 
-        self.client.put_object(Bucket=self.BUCKET_NAME,
-                               Key=key_for_s3,
-                               Body=f'{content}',
-                               Expires=ex)
+        params = {'Bucket': self.BUCKET_NAME,
+                  'Key': key_for_s3,
+                  'Body': f'{content}'}
+
+        if ex:
+            params['Expires'] = ex
+
+        self.client.put_object(**params)
 
     def delete_object(self, key_for_s3):
         self.client.delete_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
