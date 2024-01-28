@@ -11,7 +11,7 @@ load_dotenv()
 
 class S3Storage:
     def __init__(self):
-        self.ENDPOINT = "https://s3.ru-1.storage.selcloud.ru"
+        self.ENDPOINT = os.getenv('ENDPOINT')
         self.ACCESS_KEY = os.getenv('ACCESS_KEY')
         self.SECRET_KEY = os.getenv('SECRET_KEY')
         self.BUCKET_NAME = os.getenv('BUCKET_NAME')
@@ -49,10 +49,14 @@ class S3Storage:
         if not content:
             content = self.get_object_content(key_for_s3)
 
-        self.client.put_object(Bucket=self.BUCKET_NAME,
-                               Key=key_for_s3,
-                               Body=f'{content}',
-                               Expires=ex)
+        params = {'Bucket': self.BUCKET_NAME,
+                  'Key': key_for_s3,
+                  'Body': f'{content}'}
+
+        if ex:
+            params['Expires'] = ex
+
+        self.client.put_object(**params)
 
     def delete_object(self, key_for_s3):
         self.client.delete_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)

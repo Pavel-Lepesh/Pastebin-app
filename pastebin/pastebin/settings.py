@@ -25,13 +25,16 @@ load_dotenv()
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o=&-&%slnbpuv9)^yt&=1mt!1ooh!&ff+7g7zl7wktcqe17uc#'
+SECRET_KEY = str(os.getenv('SECRET_KEY_DJANGO'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = str(os.getenv('DEBUG'))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
+INTERNAL_IPS = str(os.getenv('INTERNAL_IPS')).split(" ")
+
+CSRF_TRUSTED_ORIGINS = str(os.getenv('CSRF_TRUSTED_ORIGINS')).split(" ")
 
 # Application definition
 
@@ -95,7 +98,7 @@ DATABASES = {
         'NAME': 'pastebin',
         'USER': os.getenv("USER_DB"),
         'PASSWORD': os.getenv("PASSWORD_DB"),
-        'HOST': 'localhost',
+        'HOST': os.getenv("HOST_DB"),  # для локальных тестов localhost
         'PORT': '5432',
     }
 }
@@ -163,11 +166,11 @@ SPECTACULAR_SETTINGS = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
+        'LOCATION': f'{os.getenv("MEMCAHCED_HOST")}:11211',
     },
     'redis': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379',
+        'LOCATION': f'redis://{os.getenv("REDIS_HOST")}:6379',
         'OPTIONS': {
             'db': '0',
             'SERIALIZER': 'django_redis.serializers.json.JSONSerializer',
@@ -175,7 +178,7 @@ CACHES = {
     },
 }
 
-REDIS_HOST = 'localhost'
+REDIS_HOST = os.getenv("CELERY_HOST_REDIS")
 REDIS_PORT = '6379'
 BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/1'
 BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}

@@ -1,6 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet, GenericViewSet
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import mixins, status
 from rest_framework.decorators import action
@@ -150,7 +150,10 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         item = self.get_object()
         key_for_s3 = str(item.key_for_s3)
         s3_storage.delete_object(key_for_s3)
-        cache.delete(item.hash_link)
+
+        if cache.get(item.hash_link):
+            cache.delete(item.hash_link)
+
         self.perform_destroy(item)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -160,14 +163,31 @@ class LinkAPIView(ViewSet):
     parser_classes = (MultiPartParser, JSONParser)
     permission_classes = (IsAuthenticated,)
 
+    def get_permissions(self):
+        if self.action == 'list':
+            return [IsAuthenticated()]
+        elif self.action == 'public_notes':
+            return [AllowAny()]
+        return super().get_permissions()
+
     #@extend_schema(request=NoteSerializer, responses=NoteSerializer)
     def list(self, request):
-        queryset = Note.objects.filter(user=request.user.id, availability='public')
+        queryset = Note.objects.filter(user=request.user.id)
         serializer = NoteSerializer(queryset, many=True)
+        return Response({'data': serializer.data})
+
+    def public_notes(self, request, user_id):
+        public_notes = Note.objects.filter(user=user_id, availability='public')
+        serializer = NoteSerializer(public_notes, many=True)
         return Response({'data': serializer.data})
 
     #@extend_schema(request=LinkSerializer, responses=LinkSerializer)
     def create(self, request):
+        limit_kb = 10 * 1024
+
+        if len(request.data['content'].encode('utf-8')) > limit_kb:
+            return Response('Content data is too big.', status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+
         key_for_s3 = str(uuid.uuid4())
 
         while s3_storage.object_exist(key_for_s3):
