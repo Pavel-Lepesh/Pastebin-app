@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: pastebin/Dockerfile
-    command: python pastebin/manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - 8000:8000
     env_file:
@@ -36,7 +36,9 @@ services:
     build:
       context: .
       dockerfile: pastebin/Dockerfile
-    command: bash -c "cd pastebin && celery -A hash_generator worker -P eventlet --loglevel=info"
+    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
+    env_file:
+      - ./.env
     depends_on:
       - redis
       - web
@@ -44,7 +46,9 @@ services:
     build:
       context: .
       dockerfile: pastebin/Dockerfile
-    command: bash -c "cd pastebin && celery -A hash_generator beat -l info"
+    command: bash -c "celery -A hash_generator beat -l info"
+    env_file:
+      - ./.env
     depends_on:
       - redis
       - web
@@ -53,7 +57,9 @@ services:
     build:
       context: .
       dockerfile: pastebin/Dockerfile
-    command: bash -c "cd pastebin && celery -A api beat -l info"
+    command: bash -c "celery -A api beat -l info"
+    env_file:
+      - ./.env
     depends_on:
       - redis
       - web
