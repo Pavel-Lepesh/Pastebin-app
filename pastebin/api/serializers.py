@@ -14,6 +14,15 @@ class CommentSerializer(ModelSerializer):
         fields = ('note_comment_id', 'note', 'user', 'body')
 
 
+class GetCommentSerializer(Serializer):
+    note_comment_id = serializers.IntegerField()
+    user = serializers.CharField(max_length=255)
+    body = serializers.CharField()
+    likes = serializers.IntegerField(default=0)
+    dislikes = serializers.IntegerField(default=0)
+    created = serializers.DateTimeField()
+
+
 class NoteSerializer(ModelSerializer):
     class Meta:
         model = Note

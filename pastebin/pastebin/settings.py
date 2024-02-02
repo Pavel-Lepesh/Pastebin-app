@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
     'drf_spectacular',
+    'drf_yasg',
     'rest_framework.authtoken',
     'djoser',
     'redisboard',

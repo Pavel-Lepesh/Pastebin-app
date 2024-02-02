@@ -2,8 +2,8 @@ from django.test import TestCase
 from .models import Note
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db.utils import IntegrityError
 from django.db import transaction
-from copy import deepcopy
 
 
 class NoteTests(TestCase):
@@ -12,7 +12,7 @@ class NoteTests(TestCase):
                                                   password='1234')
         self.data = {
             'title': 'Test note',
-            'hash_link': 123456789,
+            'hash_link': '123456789',
             'expiration': None,
             'user': self.test_user,
             'key_for_s3': '123e4567-e89b-12d3-a456-426655440000',
@@ -34,13 +34,15 @@ class NoteTests(TestCase):
         self.assertIsInstance(self.test_note, Note)
 
     def test_invalid_key_for_s3(self):
-        data = deepcopy(self.data)
-        data['key_for_s3'] = '1234'
+        self.test_note.key_for_s3 = '1234'
         with self.assertRaises(ValidationError):
-            Note.objects.create(**data)
+            self.test_note.full_clean()
 
     def test_invalid_availability(self):
-        data = deepcopy(self.data)
-        data['availability'] = 'invalid_value'
+        self.test_note.availability = 'invalid_value'
         with self.assertRaises(ValidationError):
-            Note.objects.create(**data)
+            self.test_note.full_clean()
+
+    def test_unique_hash_link(self):
+        with self.assertRaises(IntegrityError):
+            Note.objects.create(**self.data)

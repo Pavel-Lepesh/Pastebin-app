@@ -8,12 +8,14 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
-from drf_spectacular.utils import extend_schema
-from .serializers import NoteSerializer, LinkSerializer, CommentSerializer
+from django.utils.decorators import method_decorator
+from .serializers import NoteSerializer, LinkSerializer, CommentSerializer, GetCommentSerializer
 from .models import Note, UserStars, UserCommentRating, UserLikes
 from .s3_storage import s3_storage
 from .permissions import IsOwnerOrReadOnly
 from botocore.exceptions import ClientError
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 import uuid
 
 
@@ -104,8 +106,8 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
                      mixins.DestroyModelMixin,
                      GenericViewSet):
     queryset = Note.objects.all()
-    parser_classes = (MultiPartParser, JSONParser)
     permission_classes = (IsOwnerOrReadOnly,)
+    serializer_class = NoteSerializer
 
     def get_object(self):
         obj = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['pk'])
@@ -159,7 +161,7 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class LinkAPIView(ViewSet):
+class LinkAPIView(GenericViewSet):
     parser_classes = (MultiPartParser, JSONParser)
     permission_classes = (IsAuthenticated,)
 
@@ -170,7 +172,7 @@ class LinkAPIView(ViewSet):
             return [AllowAny()]
         return super().get_permissions()
 
-    #@extend_schema(request=NoteSerializer, responses=NoteSerializer)
+    @swagger_auto_schema(operation_summary='summary', operation_description='desc')
     def list(self, request):
         queryset = Note.objects.filter(user=request.user.id)
         serializer = NoteSerializer(queryset, many=True)
@@ -181,7 +183,8 @@ class LinkAPIView(ViewSet):
         serializer = NoteSerializer(public_notes, many=True)
         return Response({'data': serializer.data})
 
-    #@extend_schema(request=LinkSerializer, responses=LinkSerializer)
+    @swagger_auto_schema(request_body=LinkSerializer,
+                         responses={201: openapi.Response('Response', NoteSerializer)})
     def create(self, request):
         limit_kb = 10 * 1024
 
@@ -217,6 +220,8 @@ class NoteComments(mixins.ListModelMixin,
     serializer_class = CommentSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
+    @swagger_auto_schema(tags=['Comments'],
+                         responses={200: openapi.Response('response_body', GetCommentSerializer)})
     def list(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
         comments = [{'note_comment_id': comment.note_comment_id,
@@ -227,6 +232,7 @@ class NoteComments(mixins.ListModelMixin,
                      'created': comment.created} for comment in note.comments.all()]
         return Response({'comments': comments})
 
+    @swagger_auto_schema(tags=['Comments'])
     def create(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
         note_comment_id = note.comments.count() + 1
@@ -238,6 +244,7 @@ class NoteComments(mixins.ListModelMixin,
         self.perform_create(serializer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @swagger_auto_schema(tags=['Comments'])
     def partial_update(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
         comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
@@ -246,6 +253,7 @@ class NoteComments(mixins.ListModelMixin,
         self.perform_update(serializer)
         return Response({'data': serializer.validated_data})
 
+    @swagger_auto_schema(tags=['Comments'])
     def destroy(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
         comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
@@ -253,6 +261,7 @@ class NoteComments(mixins.ListModelMixin,
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @swagger_auto_schema(tags=['Comments'])
     @action(detail=True, methods=['post'])
     def rating(self, request, hash_link=None, note_comment_id=None, action_=None, cancel=None):
         note = get_object_or_404(self.get_queryset(), hash_link=hash_link)

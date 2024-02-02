@@ -1,6 +1,5 @@
 from django.urls import path, re_path
 from api.views import LinkAPIView, LikePost, UserStars
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView, TokenVerifyView
 from .views import NoteComments
 
@@ -21,6 +20,4 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path("schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui")
 ]

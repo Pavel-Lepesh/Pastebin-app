@@ -19,7 +19,7 @@ from django.urls import path, include
 from api.views import URLNoteAPIView
 from hash_generator.views import StartGenerate
 from rest_framework import routers
-
+from .yasg import urlpatterns as yasg_urls
 
 router = routers.SimpleRouter()
 router.register(r'', URLNoteAPIView)
@@ -32,3 +32,5 @@ urlpatterns = [
     path('start-generate/', StartGenerate.as_view()),
     path('api/v1/', include('api.urls')),
 ]
+
+urlpatterns += yasg_urls
