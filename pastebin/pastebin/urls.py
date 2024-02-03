@@ -19,6 +19,7 @@ from django.urls import path, include
 from api.views import URLNoteAPIView
 from hash_generator.views import StartGenerate
 from rest_framework import routers
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 
 
 router = routers.SimpleRouter()
@@ -31,4 +32,6 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('start-generate/', StartGenerate.as_view()),
     path('api/v1/', include('api.urls')),
+    path('/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path("doc/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui")
 ]

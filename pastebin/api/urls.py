@@ -1,12 +1,11 @@
 from django.urls import path, re_path
 from api.views import LinkAPIView, LikePost, UserStars
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView, TokenVerifyView
 from .views import NoteComments
 
 
 urlpatterns = [
-    re_path(r'^comments/(?P<hash_link>[\w-]+)/(?P<note_comment_id>\d+)/(?P<action_>(like|dislike))(?P<cancel>/cancel)?$',
+    re_path(r'^comments/(?P<hash_link>[\w-]+)/(?P<note_comment_id>\d+)/(?P<action_>(like|dislike))/(?P<cancel>cancel)?$',
             NoteComments.as_view({'post': 'rating'})),
     path('comments/<str:hash_link>', NoteComments.as_view({'get': 'list', 'post': 'create'})),
     path('comments/<str:hash_link>/<int:note_comment_id>', NoteComments.as_view({'patch': 'partial_update',
@@ -21,6 +20,4 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    path("schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui")
 ]

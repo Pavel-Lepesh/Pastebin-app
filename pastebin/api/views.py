@@ -8,11 +8,14 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
-from drf_spectacular.utils import extend_schema
-from .serializers import NoteSerializer, LinkSerializer, CommentSerializer
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer)
+from .doc_serializers import (GetCommentSerializer, NotFound404Serializer, NotAuthorized401Serializer,
+                              PostOrUpdateCommentSerializer, BadRequest400Serializer, Forbidden403Serializer,
+                              RateCommentSerializer, CommonBadRequest400Serializer)
 from .models import Note, UserStars, UserCommentRating, UserLikes
 from .s3_storage import s3_storage
-from .permissions import IsOwnerOrReadOnly
+from .permissions import IsOwnerOrReadOnly, IsOwnerOrReadOnlyComments
 from botocore.exceptions import ClientError
 import uuid
 
@@ -208,6 +211,68 @@ class LinkAPIView(ViewSet):
         return Response({'data': serializer.validated_data})
 
 
+@extend_schema(tags=['Comments'])
+@extend_schema_view(
+    list=extend_schema(
+        summary='get note\'s comments',
+        responses={
+            status.HTTP_200_OK: GetCommentSerializer(many=True),
+            status.HTTP_404_NOT_FOUND: NotFound404Serializer,
+        }
+    ),
+    create=extend_schema(
+        summary='post a comment for the note',
+        request=PostOrUpdateCommentSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentSerializer,
+            status.HTTP_400_BAD_REQUEST: BadRequest400Serializer(many=True),
+            status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer
+        }
+    ),
+    partial_update=extend_schema(
+        summary='update comment\'s body',
+        request=PostOrUpdateCommentSerializer,
+        responses={
+            status.HTTP_201_CREATED: CommentSerializer,
+            status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+            status.HTTP_403_FORBIDDEN: Forbidden403Serializer
+        }
+    ),
+    destroy=extend_schema(
+        summary='delete the comment',
+        responses={
+            status.HTTP_204_NO_CONTENT: None,
+            status.HTTP_403_FORBIDDEN: Forbidden403Serializer,
+            status.HTTP_404_NOT_FOUND: NotFound404Serializer
+        }
+    ),
+    rating=extend_schema(
+        summary='rate the comment',
+        request=None,
+        responses={
+            status.HTTP_200_OK: RateCommentSerializer,
+            status.HTTP_400_BAD_REQUEST: CommonBadRequest400Serializer,
+            status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+            status.HTTP_404_NOT_FOUND: NotFound404Serializer
+        },
+        parameters=[
+            OpenApiParameter(
+                name='action_',
+                description='Select "like" or "dislike" to rate the comment.',
+                location=OpenApiParameter.PATH,
+                enum=['like', 'dislike']
+            ),
+            OpenApiParameter(
+                name='cancel',
+                description='If you want to cancel an already existing rate, type "cancel" at the end of the endpoint.'
+                            'Otherwise, leave this field blank.',
+                required=False,
+                location=OpenApiParameter.PATH,
+                enum=['cancel', '']
+            )
+        ]
+    )
+)
 class NoteComments(mixins.ListModelMixin,
                    mixins.CreateModelMixin,
                    mixins.UpdateModelMixin,
@@ -215,7 +280,13 @@ class NoteComments(mixins.ListModelMixin,
                    GenericViewSet):
     queryset = Note.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsOwnerOrReadOnlyComments,)
+
+    def get_object(self):
+        note = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['hash_link'])
+        obj = get_object_or_404(note.comments, note_comment_id=self.kwargs['note_comment_id'])
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def list(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
@@ -239,16 +310,14 @@ class NoteComments(mixins.ListModelMixin,
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
-        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
-        comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
+        comment = self.get_object()
         serializer = self.get_serializer(instance=comment, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        return Response({'data': serializer.validated_data})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
-        comment = get_object_or_404(note.comments, note_comment_id=kwargs['note_comment_id'])
+        comment = self.get_object()
         self.perform_destroy(comment)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -261,7 +330,7 @@ class NoteComments(mixins.ListModelMixin,
 
         if not cancel:
             if user_rating.exists():
-                return Response({'message': 'You have already rated the comment'},
+                return Response({'detail': 'You have already rated the comment'},
                                 status=status.HTTP_400_BAD_REQUEST)
             match action_:
                 case 'like':
@@ -273,7 +342,7 @@ class NoteComments(mixins.ListModelMixin,
                                              rating=action_)
         else:
             if not user_rating.exists():
-                return Response({'message': 'You have\'t rated the comment yet'},
+                return Response({'detail': 'You have\'t rated the comment yet'},
                                 status=status.HTTP_400_BAD_REQUEST)
             match action_:
                 case 'like':
@@ -283,5 +352,5 @@ class NoteComments(mixins.ListModelMixin,
             user_rating.delete()
 
         comment.meta_data.save()
-        return Response({'rating': {'likes': comment.meta_data.likes,
-                                    'dislikes': comment.meta_data.dislikes}})
+        return Response({'likes': comment.meta_data.likes,
+                         'dislikes': comment.meta_data.dislikes})

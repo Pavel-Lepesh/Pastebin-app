@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
     'drf_spectacular',
+    'drf_spectacular_sidecar',
     'rest_framework.authtoken',
     'djoser',
     'redisboard',
@@ -161,6 +162,9 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "Pastebin Project",
     "DESCRIPTION": "Pastebin",
     "VERSION": "1.0.0",
+    'SWAGGER_UI_DIST': 'SIDECAR',  
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 CACHES = {
