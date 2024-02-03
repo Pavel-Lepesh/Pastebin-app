@@ -5,8 +5,8 @@ from .views import NoteComments
 
 
 urlpatterns = [
-    re_path(r'^comments/(?P<hash_link>[\w-]+)/(?P<note_comment_id>\d+)/(?P<action_>(like|dislike))(?P<cancel>/cancel)?$',
-            NoteComments.as_view({'post': 'rating'})),
+    re_path(r'^comments/(?P<hash_link>[\w-]+)/(?P<note_comment_id>\d+)/(?P<action_>(like|dislike))/(?P<cancel>cancel)?$',
+            NoteComments.as_view({'get': 'rating'})),
     path('comments/<str:hash_link>', NoteComments.as_view({'get': 'list', 'post': 'create'})),
     path('comments/<str:hash_link>/<int:note_comment_id>', NoteComments.as_view({'patch': 'partial_update',
                                                                                  'delete': 'destroy'})),

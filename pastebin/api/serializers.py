@@ -8,6 +8,10 @@ from django.utils import timezone
 from datetime import timedelta
 
 
+class EmptySerializer(Serializer):
+    pass
+
+
 class CommentSerializer(ModelSerializer):
     class Meta:
         model = Comment
@@ -21,6 +25,10 @@ class GetCommentSerializer(Serializer):
     likes = serializers.IntegerField(default=0)
     dislikes = serializers.IntegerField(default=0)
     created = serializers.DateTimeField()
+
+
+class PostOrUpdateCommentSerializer(Serializer):
+    body = serializers.CharField()
 
 
 class NoteSerializer(ModelSerializer):
