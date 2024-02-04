@@ -1,6 +1,23 @@
 from rest_framework import serializers
 
 
+class CreateNoteSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255)
+    content = serializers.CharField()
+    availability = serializers.ChoiceField(choices=['public', 'private'])
+    expiration = serializers.IntegerField(default=None, required=False)
+
+
+class NoteLikesSerializer(serializers.Serializer):
+    likes = serializers.IntegerField(default=0)
+
+
+class NoteMetaDataSerializer(serializers.Serializer):
+    views = serializers.IntegerField(default=0)
+    stars = serializers.IntegerField(default=0)
+    likes = serializers.IntegerField(default=0)
+
+
 class GetCommentSerializer(serializers.Serializer):
     note_comment_id = serializers.IntegerField()
     user = serializers.CharField(max_length=255)
@@ -8,6 +25,14 @@ class GetCommentSerializer(serializers.Serializer):
     likes = serializers.IntegerField(default=0)
     dislikes = serializers.IntegerField(default=0)
     created = serializers.DateTimeField()
+
+
+class MyStarsSerializer(serializers.Serializer):
+    my_stars = serializers.DictField()
+
+
+class AddStarSerializer(serializers.Serializer):
+    save_to_stars = serializers.CharField()
 
 
 class PostOrUpdateCommentSerializer(serializers.Serializer):

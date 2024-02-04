@@ -159,12 +159,16 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Pastebin Project",
+    "TITLE": "Pastebin App",
     "DESCRIPTION": "Pastebin",
     "VERSION": "1.0.0",
     'SWAGGER_UI_DIST': 'SIDECAR',  
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
     'REDOC_DIST': 'SIDECAR',
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_SETTINGS": {
+        "filter": True,
+    },
 }
 
 CACHES = {
