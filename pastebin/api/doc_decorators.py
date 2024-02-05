@@ -4,7 +4,8 @@ from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer)
 from .doc_serializers import (GetCommentSerializer, NotFound404Serializer, NotAuthorized401Serializer,
                               PostOrUpdateCommentSerializer, BadRequest400Serializer, Forbidden403Serializer,
                               RateCommentSerializer, CommonBadRequest400Serializer, NoteMetaDataSerializer,
-                              NoteLikesSerializer, AddStarSerializer, MyStarsSerializer, CreateNoteSerializer)
+                              NoteLikesSerializer, AddStarSerializer, MyStarsSerializer, CreateNoteSerializer,
+                              BaseNoteSerializer, UpdateNoteSerializer)
 
 
 def comments_doc(cls):
@@ -150,4 +151,41 @@ def notes_doc(cls):
 
 
 def url_note_doc(cls):
-    pass
+    return extend_schema_view(
+        retrieve=extend_schema(
+            summary='get the note',
+            responses={
+                status.HTTP_200_OK: BaseNoteSerializer,
+                status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+                status.HTTP_403_FORBIDDEN: Forbidden403Serializer,
+                status.HTTP_404_NOT_FOUND: NotFound404Serializer
+            }
+        ),
+        update=extend_schema(
+            summary='update your note',
+            request=CreateNoteSerializer,
+            responses={
+                status.HTTP_201_CREATED: LinkSerializer,
+                status.HTTP_400_BAD_REQUEST: BadRequest400Serializer,
+                status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+                status.HTTP_403_FORBIDDEN: Forbidden403Serializer
+            }
+        ),
+        partial_update=extend_schema(
+            summary='partially update your note',
+            request=CreateNoteSerializer(partial=True),
+            responses={
+                status.HTTP_201_CREATED: UpdateNoteSerializer,
+                status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+                status.HTTP_403_FORBIDDEN: Forbidden403Serializer
+            }
+        ),
+        destroy=extend_schema(
+            summary='delete your note',
+            responses={
+                status.HTTP_204_NO_CONTENT: None,
+                status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,
+                status.HTTP_403_FORBIDDEN: Forbidden403Serializer
+            }
+        )
+    )(cls)

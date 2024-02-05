@@ -2,9 +2,13 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer
+from .doc_decorators import account_doc
 
 
+@extend_schema(tags=['Accounts'])
+@account_doc
 class UserCreateAPI(APIView):
     parser_classes = (MultiPartParser, JSONParser)
 

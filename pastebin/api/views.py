@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
 from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer)
-from .doc_decorators import comments_doc, note_meta_doc, users_stars_doc, notes_doc
+from .doc_decorators import comments_doc, note_meta_doc, users_stars_doc, notes_doc, url_note_doc
 from .doc_serializers import NotFound404Serializer
 from .models import Note, UserStars, UserCommentRating, UserLikes
 from .s3_storage import s3_storage
@@ -105,6 +105,8 @@ class LikePost(GenericViewSet):
             return Response({'likes': item.meta_data.likes})
 
 
+@extend_schema(tags=['Base access'])
+@url_note_doc
 class URLNoteAPIView(mixins.RetrieveModelMixin,
                      mixins.UpdateModelMixin,
                      mixins.DestroyModelMixin,
@@ -112,9 +114,10 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
     queryset = Note.objects.all()
     parser_classes = (MultiPartParser, JSONParser)
     permission_classes = (IsOwnerOrReadOnly,)
+    lookup_field = 'hash_link'
 
     def get_object(self):
-        obj = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['pk'])
+        obj = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['hash_link'])
         self.check_object_permissions(self.request, obj)
         return obj
 
@@ -143,14 +146,14 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        return Response({'data': serializer.validated_data})
+        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
         serializer = LinkSerializer(instance=self.get_object(), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        return Response({'data': serializer.validated_data})
+        return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         item = self.get_object()

@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
 
+class UpdateNoteSerializer(serializers.Serializer):
+    updated_field = serializers.CharField()
+
+
+class BaseNoteSerializer(serializers.Serializer):
+    content = serializers.CharField()
+
+
 class CreateNoteSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
     content = serializers.CharField()
