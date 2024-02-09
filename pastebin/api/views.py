@@ -1,5 +1,5 @@
 from rest_framework.response import Response
-from rest_framework.viewsets import ViewSet, GenericViewSet
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import mixins, status

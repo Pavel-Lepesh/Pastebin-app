@@ -11,11 +11,16 @@ class Note(models.Model):
     user = models.ForeignKey(User, verbose_name='username', on_delete=models.CASCADE)
     key_for_s3 = models.UUIDField()
     availability = models.CharField(choices=(('public', 'public'),
-                                             ('private', 'private')))
+                                             ('private', 'private')),
+                                    default='public')
     user_stars = models.ManyToManyField(User, through='UserStars', related_name='starred_notes')
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class NoteMetaData(models.Model):

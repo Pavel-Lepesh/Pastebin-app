@@ -12,7 +12,7 @@ class BaseNoteSerializer(serializers.Serializer):
 class CreateNoteSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255)
     content = serializers.CharField()
-    availability = serializers.ChoiceField(choices=['public', 'private'])
+    availability = serializers.ChoiceField(choices=['public', 'private'], default='public')
     expiration = serializers.IntegerField(default=None, required=False)
 
 

@@ -15,7 +15,7 @@ urlpatterns = [
     path('mystars/', UserStars.as_view({'get': 'retrieve'})),
     path('mystars/delete/<str:hash_link>', UserStars.as_view({'delete': 'destroy'})),
     path('addstar/<str:hash_link>', UserStars.as_view({'post': 'create'})),
-    path('notes/', LinkAPIView.as_view({'get': 'list', 'post': 'create'})),
+    path('notes/', LinkAPIView.as_view({'get': 'list', 'post': 'create'}), name='get_create_note'),
     path('notes/usernotes/<int:user_id>', LinkAPIView.as_view({'get': 'public'})),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
