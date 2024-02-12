@@ -27,13 +27,10 @@ class LinkSerializer(Serializer):
     expiration = serializers.IntegerField(default=None)
     key_for_s3 = serializers.UUIDField()
     availability = serializers.CharField()
+    hash_link = serializers.CharField()
 
     def create(self, validated_data):
         key_for_s3 = str(validated_data.get('key_for_s3'))
-
-        key = caches['redis'].keys('hash_key: *')[0]
-        hash_link = caches['redis'].get(key)
-        caches['redis'].delete(key)
 
         if validated_data.get('expiration'):
             expiration = timezone.localtime() + timedelta(seconds=validated_data.get('expiration'))
@@ -43,7 +40,7 @@ class LinkSerializer(Serializer):
         data = {
             'title': validated_data.get('title'),
             'user': User.objects.get(id=validated_data.get('user')),
-            'hash_link': hash_link,
+            'hash_link': validated_data.get('hash_link'),
             'expiration': expiration,
             'availability': validated_data.get('availability'),
             'key_for_s3': key_for_s3,

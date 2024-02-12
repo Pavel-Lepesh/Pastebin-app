@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from django.contrib.auth.models import User
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
@@ -170,7 +170,10 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
 
 @extend_schema(tags=['User notes'])
 @notes_doc
-class LinkAPIView(GenericViewSet):
+class LinkAPIView(GenericViewSet,
+                  mixins.CreateModelMixin,
+                  mixins.RetrieveModelMixin,
+                  mixins.ListModelMixin):
     parser_classes = (MultiPartParser, JSONParser)
     permission_classes = (IsAuthenticated,)
     serializer_class = NoteSerializer
@@ -182,7 +185,7 @@ class LinkAPIView(GenericViewSet):
             return [AllowAny()]
         return super().get_permissions()
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         queryset = Note.objects.filter(user=request.user.id)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -200,7 +203,7 @@ class LinkAPIView(GenericViewSet):
         serializer = self.get_serializer(public_notes, many=True)
         return Response(serializer.data)
 
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         limit_kb = 10 * 1024
 
         if len(request.data['content'].encode('utf-8')) > limit_kb:
@@ -213,14 +216,19 @@ class LinkAPIView(GenericViewSet):
 
         while True:
             try:
+                key = caches['redis'].keys('hash_key: *')[0]
+                hash_link = caches['redis'].get(key)
+                caches['redis'].delete(key)
                 serializer = LinkSerializer(data={'user': request.user.id,
                                                   'key_for_s3': key_for_s3,
+                                                  'hash_link': hash_link,
                                                   **request.data})
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 break
             except (IntegrityError, ClientError) as error:
                 print(error)
+                #return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 continue
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
