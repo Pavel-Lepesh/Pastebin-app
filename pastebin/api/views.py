@@ -142,6 +142,7 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         item = self.get_object()
         serializer = LinkSerializer(instance=item, data={'user': item.user.id,
                                                          'key_for_s3': item.key_for_s3,
+                                                         'hash_link': item.hash_link,
                                                          **request.data})
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -226,10 +227,11 @@ class LinkAPIView(GenericViewSet,
                 serializer.is_valid(raise_exception=True)
                 serializer.save()
                 break
-            except (IntegrityError, ClientError) as error:
-                print(error)
-                #return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                continue
+            except IntegrityError:
+                continue  # this error catches hash_link collisions
+            except ClientError as error:
+                #continue
+                return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
@@ -259,7 +261,7 @@ class NoteComments(mixins.ListModelMixin,
                      'likes': comment.meta_data.likes,
                      'dislikes': comment.meta_data.dislikes,
                      'created': comment.created} for comment in note.comments.all()]
-        return Response({'comments': comments})
+        return Response(comments)
 
     def create(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])

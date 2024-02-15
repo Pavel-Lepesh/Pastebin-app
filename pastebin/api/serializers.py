@@ -3,7 +3,6 @@ from rest_framework import serializers
 from .models import Note, Comment
 from .s3_storage import s3_storage
 from django.contrib.auth.models import User
-from django.core.cache import caches
 from django.utils import timezone
 from datetime import timedelta
 

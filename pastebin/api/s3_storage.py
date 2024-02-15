@@ -21,7 +21,7 @@ class S3Storage:
                         config=Config(signature_version="s3v4"),
                         aws_access_key_id=self.ACCESS_KEY,
                         aws_secret_access_key=self.SECRET_KEY,
-                        region_name="ru-1"
+                        # region optional
                         )
 
     def generate_link(self, key_for_s3, expiration=3600):
@@ -58,8 +58,16 @@ class S3Storage:
 
         self.client.put_object(**params)
 
-    def delete_object(self, key_for_s3):
+    def delete_object(self, key_for_s3: str):
         self.client.delete_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
+
+    def check_connection(self):
+        try:
+            result = self.client.list_buckets()
+            return True if result else False
+        except Exception as error:
+            return False
 
 
 s3_storage = S3Storage()
+s3_storage.check_connection()
