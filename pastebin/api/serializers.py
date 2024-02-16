@@ -2,7 +2,7 @@ from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
 from .models import Note, Comment
 from .s3_storage import s3_storage
-from django.contrib.auth.models import User
+from accounts.models import User
 from django.utils import timezone
 from datetime import timedelta
 

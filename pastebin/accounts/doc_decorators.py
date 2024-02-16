@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .serializers import UserSerializer
-from .doc_serializers import BadRequest400Serializer
+from .doc_serializers import BadRequest400Serializer, NotAuthorized401Serializer
 from rest_framework import status
 
 
@@ -12,6 +12,18 @@ def account_doc(cls):
             responses={
                 status.HTTP_201_CREATED: UserSerializer,
                 status.HTTP_400_BAD_REQUEST: BadRequest400Serializer
+            }
+        )
+    )(cls)
+
+
+def delete_account_doc(cls):
+    return extend_schema_view(
+        delete=extend_schema(
+            summary='delete your account',
+            responses={
+                status.HTTP_204_NO_CONTENT: None,
+                status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer
             }
         )
     )(cls)

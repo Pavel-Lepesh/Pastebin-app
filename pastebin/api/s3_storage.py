@@ -4,9 +4,11 @@ from datetime import datetime
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+import logging
 
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 class S3Storage:
@@ -63,8 +65,13 @@ class S3Storage:
 
     def check_connection(self):
         try:
-            result = self.client.list_buckets()
-            return True if result else False
+            logger.info("Check S3 connection")
+            result = True if self.client.list_buckets() else False
+            if result:
+                logger.info("S3 connected successfully")
+            else:
+                logger.error("Error with connection to S3")
+            return result
         except Exception as error:
             return False
 

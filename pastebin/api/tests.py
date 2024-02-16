@@ -3,7 +3,7 @@ import django
 django.setup()
 from django.test import TestCase, Client
 from .models import Note
-from django.contrib.auth.models import User
+from accounts.models import User
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.urls import reverse

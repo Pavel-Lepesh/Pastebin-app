@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework import mixins, status
 from rest_framework.decorators import action
-from django.contrib.auth.models import User
+from accounts.models import User
 from django.core.cache import cache, caches
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
@@ -17,6 +17,10 @@ from .s3_storage import s3_storage
 from .permissions import IsOwnerOrReadOnly, IsOwnerOrReadOnlyComments
 from botocore.exceptions import ClientError
 import uuid
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema(tags=['User stars'])
