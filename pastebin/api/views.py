@@ -9,8 +9,9 @@ from django.core.cache import cache, caches
 from django.shortcuts import get_object_or_404
 from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema
-from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer)
-from .doc_decorators import comments_doc, note_meta_doc, users_stars_doc, notes_doc, url_note_doc
+from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer, GetCommentsSerializer)
+from .doc_decorators import (comments_doc, note_meta_doc, users_stars_doc, notes_doc, url_note_doc,
+                             recent_post_doc)
 from .doc_serializers import NotFound404Serializer
 from .models import Note, UserStars, UserCommentRating, UserLikes
 from .s3_storage import s3_storage
@@ -19,8 +20,21 @@ from botocore.exceptions import ClientError
 import uuid
 import logging
 
-
 logger = logging.getLogger(__name__)
+
+
+@extend_schema(tags=['Base access'])
+@recent_post_doc
+class RecentPosts(GenericViewSet,
+                  mixins.ListModelMixin):
+    queryset = Note.objects.all()
+    serializer_class = NoteSerializer
+
+    def list(self, request, *args, **kwargs):
+        limit = kwargs['limit']
+        notes = self.get_queryset().filter(availability='public').order_by('-time_create')[:limit]
+        serializer = self.get_serializer(notes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema(tags=['User stars'])
@@ -130,12 +144,13 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         item.meta_data.views += 1
 
         if item.meta_data.views >= 10:
-            content = cache.get(item.hash_link)
-            if not content:
+            has_key = cache.has_key(item.hash_link)
+            if not has_key:
                 content = s3_storage.get_object_content(str(item.key_for_s3))
                 cache.set(item.hash_link,
                           content,
                           300)
+            content = cache.get(item.hash_link)
         else:
             content = s3_storage.get_object_content(str(item.key_for_s3))
 
@@ -151,13 +166,18 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
+        if cache.has_key(item.hash_link):
+            cache.set(item.hash_link, request.data['content'])
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
-        serializer = LinkSerializer(instance=self.get_object(), data=request.data, partial=True)
+        item = self.get_object()
+        serializer = LinkSerializer(instance=item, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
+        if cache.has_key(item.hash_link):
+            cache.set(item.hash_link, request.data['content'])
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
@@ -165,7 +185,7 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         key_for_s3 = str(item.key_for_s3)
         s3_storage.delete_object(key_for_s3)
 
-        if cache.get(item.hash_link):
+        if cache.has_key(item.hash_link):
             cache.delete(item.hash_link)
 
         self.perform_destroy(item)
@@ -234,7 +254,7 @@ class LinkAPIView(GenericViewSet,
             except IntegrityError:
                 continue  # this error catches hash_link collisions
             except ClientError as error:
-                #continue
+                # continue
                 return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
@@ -253,26 +273,19 @@ class NoteComments(mixins.ListModelMixin,
 
     def get_object(self):
         note = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['hash_link'])
-        obj = get_object_or_404(note.comments, note_comment_id=self.kwargs['note_comment_id'])
+        obj = get_object_or_404(note.comments, id=self.kwargs['note_comment_id'])
         self.check_object_permissions(self.request, obj)
         return obj
 
     def list(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
-        comments = [{'note_comment_id': comment.note_comment_id,
-                     'user': str(comment),
-                     'body': comment.body,
-                     'likes': comment.meta_data.likes,
-                     'dislikes': comment.meta_data.dislikes,
-                     'created': comment.created} for comment in note.comments.all()]
-        return Response(comments)
+        serializer = GetCommentsSerializer(note.comments.all(), many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         note = get_object_or_404(self.get_queryset(), hash_link=kwargs['hash_link'])
-        note_comment_id = note.comments.count() + 1
         serializer = self.get_serializer(data={'note': note.id,
                                                'user': request.user.id,
-                                               'note_comment_id': note_comment_id,
                                                **request.data})
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -293,8 +306,7 @@ class NoteComments(mixins.ListModelMixin,
 
     @action(detail=True, methods=['post'])
     def rating(self, request, hash_link=None, note_comment_id=None, action_=None, cancel=None):
-        note = get_object_or_404(self.get_queryset(), hash_link=hash_link)
-        comment = get_object_or_404(note.comments, note_comment_id=note_comment_id)
+        comment = self.get_object()
         user_rating = UserCommentRating.objects.filter(user=request.user, comment=comment)
 
         if not cancel:

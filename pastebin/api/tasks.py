@@ -20,7 +20,7 @@ def auto_delete_when_expire():
 
         try:
             if note.expiration < datetime.now(pytz.timezone('Europe/Minsk')):
-                if cache.get(note.hash_link):
+                if cache.has_key(note.hash_link):
                     cache.delete(note.hash_link)
                 s3_storage.delete_object(str(note.key_for_s3))
                 note.delete()

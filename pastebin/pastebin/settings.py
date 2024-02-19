@@ -49,13 +49,15 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
+    'django_extensions',
     'drf_spectacular',
     'rest_framework.authtoken',
     'djoser',
     'redisboard',
     'celery',
     'django_celery_beat',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    'mptt'
 ]
 
 MIDDLEWARE = [

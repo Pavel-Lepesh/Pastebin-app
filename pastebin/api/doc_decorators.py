@@ -1,11 +1,22 @@
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from rest_framework import status
 from .serializers import (NoteSerializer, LinkSerializer, CommentSerializer)
-from .doc_serializers import (GetCommentSerializer, NotFound404Serializer, NotAuthorized401Serializer,
-                              PostOrUpdateCommentSerializer, BadRequest400Serializer, Forbidden403Serializer,
+from .doc_serializers import (NotFound404Serializer, NotAuthorized401Serializer, PostCommentSerializer,
+                              UpdateCommentSerializer, BadRequest400Serializer, Forbidden403Serializer,
                               RateCommentSerializer, CommonBadRequest400Serializer, NoteMetaDataSerializer,
                               NoteLikesSerializer, AddStarSerializer, MyStarsSerializer, CreateNoteSerializer,
-                              BaseNoteSerializer, UpdateNoteSerializer)
+                              BaseNoteSerializer, UpdateNoteSerializer, ListCommentsSerializer)
+
+
+def recent_post_doc(cls):
+    return extend_schema_view(
+        list=extend_schema(
+            summary='get recent posts',
+            responses={
+                status.HTTP_200_OK: NoteSerializer(many=True)
+            }
+        )
+    )(cls)
 
 
 def comments_doc(cls):
@@ -13,13 +24,13 @@ def comments_doc(cls):
         list=extend_schema(
             summary='get note\'s comments',
             responses={
-                status.HTTP_200_OK: GetCommentSerializer(many=True),
+                status.HTTP_200_OK: ListCommentsSerializer(many=True),
                 status.HTTP_404_NOT_FOUND: NotFound404Serializer,
             }
         ),
         create=extend_schema(
             summary='post a comment for the note',
-            request=PostOrUpdateCommentSerializer,
+            request=PostCommentSerializer,
             responses={
                 status.HTTP_201_CREATED: CommentSerializer,
                 status.HTTP_400_BAD_REQUEST: BadRequest400Serializer(many=True),
@@ -28,7 +39,7 @@ def comments_doc(cls):
         ),
         partial_update=extend_schema(
             summary='update comment\'s body',
-            request=PostOrUpdateCommentSerializer,
+            request=UpdateCommentSerializer,
             responses={
                 status.HTTP_201_CREATED: CommentSerializer,
                 status.HTTP_401_UNAUTHORIZED: NotAuthorized401Serializer,

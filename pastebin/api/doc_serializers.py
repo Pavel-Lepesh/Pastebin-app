@@ -26,13 +26,12 @@ class NoteMetaDataSerializer(serializers.Serializer):
     likes = serializers.IntegerField(default=0)
 
 
-class GetCommentSerializer(serializers.Serializer):
-    note_comment_id = serializers.IntegerField()
-    user = serializers.CharField(max_length=255)
+class ListCommentsSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    note = serializers.IntegerField()
+    user = serializers.IntegerField()
     body = serializers.CharField()
-    likes = serializers.IntegerField(default=0)
-    dislikes = serializers.IntegerField(default=0)
-    created = serializers.DateTimeField()
+    children = serializers.ListField(child=serializers.DictField(default={'key': 'value'}))
 
 
 class MyStarsSerializer(serializers.Serializer):
@@ -43,7 +42,12 @@ class AddStarSerializer(serializers.Serializer):
     save_to_stars = serializers.CharField()
 
 
-class PostOrUpdateCommentSerializer(serializers.Serializer):
+class PostCommentSerializer(serializers.Serializer):
+    body = serializers.CharField()
+    parent = serializers.IntegerField(required=False)
+
+
+class UpdateCommentSerializer(serializers.Serializer):
     body = serializers.CharField()
 
 

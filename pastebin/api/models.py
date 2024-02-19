@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from mptt.models import MPTTModel, TreeForeignKey
 
 
 class Note(models.Model):
@@ -47,19 +48,22 @@ class UserLikes(models.Model):
         unique_together = ('user', 'note')
 
 
-class Comment(models.Model):
-    note_comment_id = models.IntegerField()
+class Comment(MPTTModel):
     note = models.ForeignKey(Note, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     body = models.TextField()
+    parent = TreeForeignKey('self', null=True, blank=True, related_name='children', on_delete=models.CASCADE)
 
     def __str__(self):
         return f'By {self.user.username}'
 
+    class MPTTMeta:
+        order_insertion_by = ('-created',)
+
     class Meta:
-        ordering = ['created']
+        ordering = ['-created']
 
 
 class CommentMetaData(models.Model):

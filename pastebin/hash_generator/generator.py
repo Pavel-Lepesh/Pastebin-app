@@ -19,9 +19,9 @@ class HashGenerator:
         except ConnectionError as error:
             logger.error(f'Error initializing HashGenerator: {error}')
 
-    def start_generate(self):
+    def start_generate(self, hash_count=50):
         logger.info('Start generate')
-        for _ in range(50):
+        for _ in range(hash_count):
             hash_ = json.dumps(secrets.token_urlsafe(8))
 
             key = random.randrange(1, 10000)  # максимум возможных ключей в одно время
