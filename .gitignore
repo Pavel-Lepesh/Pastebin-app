@@ -2,5 +2,6 @@
 /.idea
 /pastebin/.env
 /pastebin/.env.prod
+/pastebin/log_file.log
 /pastebin/requirements.txt
 /requirements.txt

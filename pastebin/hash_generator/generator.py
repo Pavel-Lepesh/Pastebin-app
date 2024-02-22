@@ -9,9 +9,7 @@ from dotenv import load_dotenv
 
 
 load_dotenv()
-
-
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class HashGenerator:
@@ -19,11 +17,11 @@ class HashGenerator:
         try:
             self.redis_client = redis.StrictRedis(host=os.getenv("REDIS_HOST"), port=6379, decode_responses=False)
         except ConnectionError as error:
-            logging.error(f'Error initializing HashGenerator: {error}')
+            logger.error(f'Error initializing HashGenerator: {error}')
 
-    def start_generate(self):
-        logging.info('Start generate...')
-        for _ in range(5):
+    def start_generate(self, hash_count=50):
+        logger.info('Start generate')
+        for _ in range(hash_count):
             hash_ = json.dumps(secrets.token_urlsafe(8))
 
             key = random.randrange(1, 10000)  # максимум возможных ключей в одно время
@@ -32,8 +30,8 @@ class HashGenerator:
                 self.redis_client.set(f':1:hash_key: {key}', hash_, ex=None)
 
             except ConnectionError as error:
-                logging.error(f'Connection error: {error}')
-                logging.info('Stop generate')
+                logger.error(f'Connection error: {error}')
+                logger.info('Stop generate')
                 break
 
         logging.info('Generating completed')

@@ -1,5 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
+from mptt.models import MPTTModel, TreeForeignKey
 
 
 class Note(models.Model):
@@ -8,14 +9,19 @@ class Note(models.Model):
     time_create = models.DateTimeField(auto_now_add=True)
     time_update = models.DateTimeField(auto_now=True)
     expiration = models.DateTimeField(null=True, blank=True)
-    user = models.ForeignKey(User, verbose_name='username', on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='username', on_delete=models.CASCADE)
     key_for_s3 = models.UUIDField()
     availability = models.CharField(choices=(('public', 'public'),
-                                             ('private', 'private')))
-    user_stars = models.ManyToManyField(User, through='UserStars', related_name='starred_notes')
+                                             ('private', 'private')),
+                                    default='public')
+    user_stars = models.ManyToManyField(settings.AUTH_USER_MODEL, through='UserStars', related_name='starred_notes')
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class NoteMetaData(models.Model):
@@ -26,7 +32,7 @@ class NoteMetaData(models.Model):
 
 
 class UserStars(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     note = models.ForeignKey(Note, on_delete=models.CASCADE)
 
     class Meta:
@@ -34,7 +40,7 @@ class UserStars(models.Model):
 
 
 class UserLikes(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     note = models.ForeignKey(Note, on_delete=models.CASCADE)
     like = models.BooleanField(default=False)
 
@@ -42,19 +48,22 @@ class UserLikes(models.Model):
         unique_together = ('user', 'note')
 
 
-class Comment(models.Model):
-    note_comment_id = models.IntegerField()
+class Comment(MPTTModel):
     note = models.ForeignKey(Note, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     body = models.TextField()
+    parent = TreeForeignKey('self', null=True, blank=True, related_name='children', on_delete=models.CASCADE)
 
     def __str__(self):
         return f'By {self.user.username}'
 
+    class MPTTMeta:
+        order_insertion_by = ('-created',)
+
     class Meta:
-        ordering = ['created']
+        ordering = ['-created']
 
 
 class CommentMetaData(models.Model):
@@ -69,7 +78,7 @@ class UserCommentRating(models.Model):
         ('DISLIKE', 'dislike'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
     rating = models.CharField(max_length=7, choices=RATING_CHOICES)
 
