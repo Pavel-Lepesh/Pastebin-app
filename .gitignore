@@ -5,3 +5,5 @@
 /pastebin/log_file.log
 /pastebin/requirements.txt
 /requirements.txt
+/.env
+/.env.prod

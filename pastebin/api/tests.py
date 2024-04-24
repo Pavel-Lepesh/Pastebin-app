@@ -490,7 +490,7 @@ class CommentsTests(APITestCase):
         patch_response = self.client.patch(reverse('patch_and_delete_comment',
                                                    kwargs={
                                                        'hash_link': self.hash_link,
-                                                       'note_comment_id': post_comment.data['note_comment_id']
+                                                       'note_comment_id': post_comment.data['id']
                                                    }),
                                            headers={
                                                'Authorization': f'Bearer {self.token}'
