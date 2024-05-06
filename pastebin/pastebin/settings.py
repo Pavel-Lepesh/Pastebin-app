@@ -45,8 +45,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'api.apps.ApiConfig',
+    'notes.apps.NotesConfig',
     'accounts.apps.AccountsConfig',
+    'comments.apps.CommentsConfig',
+    'user_stars.apps.UserStarsConfig',
     'hash_generator.apps.HashGeneratorConfig',
     'rest_framework',
     'django_extensions',
@@ -220,7 +222,7 @@ LOGGING = {
         "level": "INFO",
     },
     "loggers": {
-        "api.views": {
+        "notes.views": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
