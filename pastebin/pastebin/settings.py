@@ -139,6 +139,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# AUTHENTICATION_BACKENDS = [
+#     "custom_auth.SettingsBackend"
+# ]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -157,7 +161,8 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
+        "custom_auth.SettingsBackend"
     ]
 
 }
