@@ -7,3 +7,4 @@
 /requirements.txt
 /.env
 /.env.prod
+/pastebin_authentication_service

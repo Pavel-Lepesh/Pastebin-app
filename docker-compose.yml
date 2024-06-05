@@ -1,6 +1,32 @@
-version: '3.8'
+version: '3.9'
 
 services:
+  auth_service:
+    build:
+      context: ./pastebin_authentication_service/
+    env_file:
+      - ./pastebin_authentication_service/.env.test
+    ports:
+      - "81:81"
+    depends_on:
+      - auth_db
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 81"
+  auth_db:
+    image: postgres:15
+    volumes:
+      - auth_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=pastebin_authentication_service
+    command: ["postgres", "-c", "port=5400"]
+  pastebin_nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - auth_service
   web:
     build:
       context: .
@@ -17,7 +43,7 @@ services:
   db:
     image: postgres:15
     volumes:
-     - postgres_data:/var/lib/postgresql/data/
+     - main_data:/var/lib/postgresql/data/
     environment:
      - POSTGRES_USER=root
      - POSTGRES_PASSWORD=1234
@@ -32,37 +58,38 @@ services:
     image: memcached:latest
     ports:
       - "11211:11211"
-  celery:
-    build:
-      context: .
-      dockerfile: pastebin/Dockerfile
-    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
-    env_file:
-      - ./.env
-    depends_on:
-      - redis
-      - web
-  celery_beat_hash_generator:
-    build:
-      context: .
-      dockerfile: pastebin/Dockerfile
-    command: bash -c "celery -A hash_generator beat -l info"
-    env_file:
-      - ./.env
-    depends_on:
-      - redis
-      - web
-      - celery
-  celery_beat_autodelete:
-    build:
-      context: .
-      dockerfile: pastebin/Dockerfile
-    command: bash -c "celery -A notes beat -l info"
-    env_file:
-      - ./.env
-    depends_on:
-      - redis
-      - web
-      - celery
+#  celery:
+#    build:
+#      context: .
+#      dockerfile: pastebin/Dockerfile
+#    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      - redis
+#      - web
+#  celery_beat_hash_generator:
+#    build:
+#      context: .
+#      dockerfile: pastebin/Dockerfile
+#    command: bash -c "celery -A hash_generator beat -l info"
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      - redis
+#      - web
+#      - celery
+#  celery_beat_autodelete:
+#    build:
+#      context: .
+#      dockerfile: pastebin/Dockerfile
+#    command: bash -c "celery -A notes beat -l info"
+#    env_file:
+#      - ./.env
+#    depends_on:
+#      - redis
+#      - web
+#      - celery
 volumes:
-  postgres_data:
+  main_data:
+  auth_data:
