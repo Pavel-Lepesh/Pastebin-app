@@ -8,7 +8,6 @@ from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer, AllUsersSerializer
 from .doc_decorators import account_doc, delete_account_doc
 from .models import User
-import requests
 
 
 @extend_schema(tags=['Accounts'])

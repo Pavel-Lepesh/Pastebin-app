@@ -58,27 +58,27 @@ services:
     image: memcached:latest
     ports:
       - "11211:11211"
-#  celery:
-#    build:
-#      context: .
-#      dockerfile: pastebin/Dockerfile
-#    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - redis
-#      - web
-#  celery_beat_hash_generator:
-#    build:
-#      context: .
-#      dockerfile: pastebin/Dockerfile
-#    command: bash -c "celery -A hash_generator beat -l info"
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - redis
-#      - web
-#      - celery
+  celery:
+    build:
+      context: .
+      dockerfile: pastebin/Dockerfile
+    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - web
+  celery_beat_hash_generator:
+    build:
+      context: .
+      dockerfile: pastebin/Dockerfile
+    command: bash -c "celery -A hash_generator beat -l info"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - web
+      - celery
 #  celery_beat_autodelete:
 #    build:
 #      context: .

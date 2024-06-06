@@ -60,7 +60,7 @@ function handleSignup(r) {
     });
 }
 
-function testGet(r) {
+function authStage(r) {
     var authHeader = r.headersIn['Authorization'];
 
     if (!authHeader) {
@@ -78,7 +78,7 @@ function testGet(r) {
              r.headersOut['Authorization'] = authHeader;
              r.subrequest("/_proxy_to_main_service", {
                 method: r.method,
-                body: r.requestBody,
+                body: r.requestBuffer,
                 headers: r.headersIn
              }, function(proxy_reply) {
                 r.return(proxy_reply.status, proxy_reply.responseBuffer);
@@ -122,7 +122,7 @@ function testGet(r) {
 
                     r.subrequest("/_proxy_to_main_service", {
                        method: r.method,
-                       body: r.requestBody,
+                       body: r.requestBuffer,
                        headers: r.headersIn
                     }, function(proxy_reply) {
                        r.return(proxy_reply.status, proxy_reply.responseBuffer);
@@ -135,4 +135,4 @@ function testGet(r) {
     });
 }
 
-export default { secondHello, handleSignup, testGet };
+export default { secondHello, handleSignup, authStage };
