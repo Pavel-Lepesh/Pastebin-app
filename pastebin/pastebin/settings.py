@@ -232,7 +232,7 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        "hash_generator.generator": {
+        "hash_generator_connection": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,

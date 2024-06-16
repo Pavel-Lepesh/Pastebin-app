@@ -4,7 +4,10 @@
 /pastebin/.env.prod
 /pastebin/log_file.log
 /pastebin/requirements.txt
+/pastebin/selectel.txt
 /requirements.txt
 /.env
 /.env.prod
 /pastebin_authentication_service
+/pastebin_hash_generator
+/rabbitmq

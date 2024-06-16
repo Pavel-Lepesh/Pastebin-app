@@ -3,7 +3,6 @@ function secondHello(r) {
 }
 
 function handleSignup(r) {
-    // Получаем данные из тела запроса
     try {
         var body = JSON.parse(r.requestBuffer);
     } catch (e) {
@@ -14,7 +13,6 @@ function handleSignup(r) {
     var password = body.password;
     var email = body.email;
 
-    // Проверка на наличие необходимых полей
     if (!username || !password || !email) {
         r.return(400, JSON.stringify({ error: "Missing required fields: username, password, email" }));
         return;
@@ -26,19 +24,16 @@ function handleSignup(r) {
         email: email
     });
 
-    // Выполняем субзапрос к сервису аутентификации
     r.subrequest('/_subrequest_auth', {
         method: 'POST',
         body: auth_body
     }, function(reply) {
         if (reply.status == 201) {
-            // Парсим ответ от сервиса аутентификации
             var tokens = JSON.parse(reply.responseBuffer);
             var access_token = tokens.access_token;
             var refresh_token = tokens.refresh_token;
             var user_id = tokens.id;
 
-            // Устанавливаем токены в заголовки
             r.headersOut['Authorization'] = access_token;
             r.headersOut['X-Refresh-Token'] = refresh_token;
             r.headersOut['Set-Cookie'] = `pastebin_refresh_token=${refresh_token}; HttpOnly`;
@@ -46,8 +41,7 @@ function handleSignup(r) {
             body.id = user_id;
             var updated_request_body = JSON.stringify(body);
 
-            // Проксируем запрос на конечный сервис
-            r.subrequest('/_proxy_to_pastebin', {
+            r.subrequest('/_proxy_to_pastebin_signup', {
                 method: r.method,
                 body: updated_request_body,
                 headers: r.headersIn
@@ -56,6 +50,29 @@ function handleSignup(r) {
             });
         } else {
             r.return(500, reply.status);
+        }
+    });
+}
+
+function handleDeleteUser(r) {
+    var authHeader = r.headersIn['Authorization'];
+    var request_body = JSON.stringify({
+        access_token: authHeader
+    });
+    
+    r.subrequest('/_self_delete_user', {
+        method: 'DELETE',
+        body: request_body
+    }, function(reply) {
+        if (reply.status == 204) {
+            r.subrequest('/_proxy_to_pastebin_delete_user', {
+                method: r.method,
+                headers: r.headersIn
+            }, function(proxy_reply) {
+                r.return(proxy_reply.status, proxy_reply.responseBuffer);
+            });
+        } else {
+            r.return(reply.status, reply.responseBuffer);
         }
     });
 }
@@ -76,9 +93,17 @@ function authStage(r) {
     }, function(reply) {
         if (reply.status == 200) {
              r.headersOut['Authorization'] = authHeader;
+
+             var requestBody = '';
+             try {
+                 requestBody = JSON.stringify(JSON.parse(r.requestBuffer));
+             } catch (e) {
+                 requestBody = '';
+             }
+
              r.subrequest("/_proxy_to_main_service", {
                 method: r.method,
-                body: r.requestBuffer,
+                body: requestBody,
                 headers: r.headersIn
              }, function(proxy_reply) {
                 r.return(proxy_reply.status, proxy_reply.responseBuffer);
@@ -117,16 +142,12 @@ function authStage(r) {
                 if (reply.status == 200) {
                     var new_tokens = JSON.parse(reply.responseBuffer);
                     var access_token = new_tokens.access_token;
+                    var refresh_token = new_tokens.refresh_token
 
-                    r.headersOut['Authorization'] = access_token;
+                    r.headersOut['Set-Cookie'] = `pastebin_refresh_token=${refresh_token}; Path=/; HttpOnly`;
+                    r.headersOut['New access token'] = access_token;
 
-                    r.subrequest("/_proxy_to_main_service", {
-                       method: r.method,
-                       body: r.requestBuffer,
-                       headers: r.headersIn
-                    }, function(proxy_reply) {
-                       r.return(proxy_reply.status, proxy_reply.responseBuffer);
-                    })
+                    r.return(200, 'it is necessary to replace the access token')
                 } else {
                     r.return(reply.status, reply.responseBuffer);
                 }
@@ -135,4 +156,4 @@ function authStage(r) {
     });
 }
 
-export default { secondHello, handleSignup, authStage };
+export default { secondHello, handleSignup, authStage, handleDeleteUser };

@@ -1,0 +1,6 @@
+.env
+.env.test
+consumer.py
+.idea
+app/__pycache__*
+rabbitmq

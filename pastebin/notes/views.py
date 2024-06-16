@@ -17,6 +17,7 @@ from .models import Note, UserLikes
 from s3_storage import s3_storage
 from permissions import IsOwnerOrReadOnly
 from botocore.exceptions import ClientError
+from hash_generator_connection import hash_generator
 import uuid
 import logging
 
@@ -201,9 +202,11 @@ class LinkAPIView(GenericViewSet,
 
         while True:
             try:
-                key = caches['redis'].keys('hash_key: *')[0]
-                hash_link = caches['redis'].get(key)
-                caches['redis'].delete(key)
+                # key = caches['redis'].keys('hash_key: *')[0]
+                # hash_link = caches['redis'].get(key)
+                # caches['redis'].delete(key)
+                hash_link = hash_generator.get_hash()
+                print(f"Hash link from main service {hash_link}")
                 serializer = LinkSerializer(data={'user': request.user.id,
                                                   'key_for_s3': key_for_s3,
                                                   'hash_link': hash_link,
