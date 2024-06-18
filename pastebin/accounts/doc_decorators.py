@@ -1,7 +1,9 @@
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from .serializers import UserSerializer
-from .doc_serializers import BadRequest400Serializer, NotAuthorized401Serializer
 from rest_framework import status
+
+from .doc_serializers import (BadRequest400Serializer,
+                              NotAuthorized401Serializer)
+from .serializers import UserSerializer
 
 
 def account_doc(cls):

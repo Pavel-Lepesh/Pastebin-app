@@ -1,4 +1,11 @@
-FROM nginx:1.25
+FROM nginx:latest
 
-RUN rm /etc/nginx/conf.d/default.conf
-COPY pastebin.conf /etc/nginx/conf.d/
+WORKDIR /var/www/html
+
+RUN apt-get update \
+    && apt-get install -y nginx-module-njs
+
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY sub_auth.js /etc/nginx/conf.d/sub_auth.js
+
+CMD ["nginx", "-g", "daemon off;"]

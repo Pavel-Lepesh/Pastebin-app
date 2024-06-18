@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
-from pathlib import Path
-from datetime import timedelta
-from dotenv import load_dotenv
 import os
+from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,9 +46,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'api.apps.ApiConfig',
+    'notes.apps.NotesConfig',
     'accounts.apps.AccountsConfig',
-    'hash_generator.apps.HashGeneratorConfig',
+    'comments.apps.CommentsConfig',
+    'user_stars.apps.UserStarsConfig',
     'rest_framework',
     'django_extensions',
     'drf_spectacular',
@@ -137,6 +139,10 @@ USE_I18N = True
 
 USE_TZ = True
 
+# AUTHENTICATION_BACKENDS = [
+#     "custom_auth.SettingsBackend"
+# ]
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
@@ -155,7 +161,8 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
+        "custom_auth.SettingsBackend"
     ]
 
 }
@@ -220,12 +227,12 @@ LOGGING = {
         "level": "INFO",
     },
     "loggers": {
-        "api.views": {
+        "notes.views": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
         },
-        "hash_generator.generator": {
+        "hash_generator_connection": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,
