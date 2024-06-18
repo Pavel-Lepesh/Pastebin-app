@@ -1,11 +1,12 @@
-from .celery import app
-from .models import Note
+import logging
 from datetime import datetime
+
+import pytz
 from django.core.cache import cache
 from s3_storage import s3_storage
-import logging
-import pytz
 
+from .celery import app
+from .models import Note
 
 logger = logging.getLogger(__name__)
 

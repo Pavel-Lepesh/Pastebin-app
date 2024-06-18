@@ -1,14 +1,15 @@
-from rest_framework import mixins, status
-from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
-from rest_framework.decorators import action
-from .doc_decorators import comments_doc
-from permissions import IsOwnerOrReadOnlyComments
-from .serializers import CommentSerializer, GetCommentsSerializer
-from .models import UserCommentRating
 from notes.models import Note
+from permissions import IsOwnerOrReadOnlyComments
+from rest_framework import mixins, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
+
+from .doc_decorators import comments_doc
+from .models import UserCommentRating
+from .serializers import CommentSerializer, GetCommentsSerializer
 
 
 @extend_schema(tags=['Comments'])

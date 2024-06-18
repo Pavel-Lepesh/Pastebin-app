@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import UserCreateAPI, UserDeleteAPI, get_me, get_all_users, delete_user
 
+from .views import (UserCreateAPI, UserDeleteAPI, delete_user, get_all_users,
+                    get_me)
 
 urlpatterns = [
     path('signup/', UserCreateAPI.as_view(), name='create_user'),

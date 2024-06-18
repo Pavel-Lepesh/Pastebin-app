@@ -1,9 +1,8 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from notes.views import URLNoteAPIView
 from rest_framework import routers
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
-
 
 router = routers.SimpleRouter()
 router.register(r'', URLNoteAPIView)

@@ -1,7 +1,8 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema
-from rest_framework import status
-from .serializers import (NoteSerializer, LinkSerializer)
 from doc_serializers import *
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import status
+
+from .serializers import LinkSerializer, NoteSerializer
 
 
 def recent_post_doc(cls):

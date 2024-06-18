@@ -1,10 +1,12 @@
-from rest_framework.serializers import ModelSerializer, Serializer
-from rest_framework import serializers
-from .models import Note
-from s3_storage import s3_storage
+from datetime import timedelta
+
 from accounts.models import User
 from django.utils import timezone
-from datetime import timedelta
+from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer, Serializer
+from s3_storage import s3_storage
+
+from .models import Note
 
 
 class NoteSerializer(ModelSerializer):

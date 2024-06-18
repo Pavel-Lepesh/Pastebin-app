@@ -1,6 +1,6 @@
+from django.conf import settings
 from django.db import models
 from mptt.models import MPTTModel, TreeForeignKey
-from django.conf import settings
 from notes.models import Note
 
 

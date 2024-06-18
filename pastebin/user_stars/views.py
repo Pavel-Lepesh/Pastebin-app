@@ -1,15 +1,14 @@
+from accounts.models import User
+from django.db.utils import IntegrityError
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
+from notes.models import Note, UserStars
 from rest_framework import mixins, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
 
-from accounts.models import User
 from .doc_decorators import users_stars_doc
-from notes.models import UserStars
-from django.db.utils import IntegrityError
-from notes.models import Note
 
 
 @extend_schema(tags=['User stars'])

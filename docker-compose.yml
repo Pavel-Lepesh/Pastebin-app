@@ -2,6 +2,7 @@ version: '3.9'
 
 services:
   auth_service:
+    container_name: authentication_service
     build:
       context: ./pastebin_authentication_service/
     env_file:
@@ -12,6 +13,7 @@ services:
       - auth_db
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 81"
   auth_db:
+    container_name: db_authentication_service
     image: postgres:15
     volumes:
       - auth_data:/var/lib/postgresql/data/
@@ -21,6 +23,7 @@ services:
       - POSTGRES_DB=pastebin_authentication_service
     command: ["postgres", "-c", "port=5400"]
   hash_generator:
+    container_name: hash_generator_service
     build:
       context: ./pastebin_hash_generator/
     restart: unless-stopped
@@ -33,6 +36,7 @@ services:
       - redis
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 82"
   rabbitmq:
+    container_name: hash_rabbitmq
     image: rabbitmq:3.13-management
     hostname: rabbitmq
     environment:
@@ -45,6 +49,7 @@ services:
       - "5672:5672"
       - "15672:15672"
   pastebin_nginx:
+    container_name: nginx
     build:
       context: ./nginx
     ports:
@@ -52,6 +57,7 @@ services:
     depends_on:
       - auth_service
   web:
+    container_name: main_service
     build:
       context: .
       dockerfile: pastebin/Dockerfile
@@ -66,6 +72,7 @@ services:
       - memcached
       - rabbitmq
   db:
+    container_name: main_db
     image: postgres:15
     volumes:
      - main_data:/var/lib/postgresql/data/
@@ -76,10 +83,12 @@ services:
     ports:
       - "5432:5432"
   redis:
+    container_name: redis
     image: redis:latest
     ports:
       - "6379:6379"
   memcached:
+    container_name: memcached
     image: memcached:latest
     ports:
       - "11211:11211"

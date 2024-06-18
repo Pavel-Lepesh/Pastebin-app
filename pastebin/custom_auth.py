@@ -1,11 +1,11 @@
-from rest_framework import authentication, status, exceptions
-from django.shortcuts import get_object_or_404
-from rest_framework.response import Response
-from jose import jwt, JWTError
-from dotenv import load_dotenv
-from accounts.models import User
 import os
 
+from accounts.models import User
+from django.shortcuts import get_object_or_404
+from dotenv import load_dotenv
+from jose import JWTError, jwt
+from rest_framework import authentication, exceptions, status
+from rest_framework.response import Response
 
 load_dotenv()
 

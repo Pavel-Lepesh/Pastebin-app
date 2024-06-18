@@ -1,6 +1,6 @@
-from drf_spectacular.utils import extend_schema_view, extend_schema
-from rest_framework import status
 from doc_serializers import *
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import status
 
 
 def users_stars_doc(cls):

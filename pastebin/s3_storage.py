@@ -1,11 +1,11 @@
-import boto3
+import logging
 import os
 from datetime import datetime
+
+import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
-import logging
-
 
 load_dotenv()
 logger = logging.getLogger(__name__)

@@ -1,17 +1,19 @@
 import django
 
 django.setup()
-from django.test import TestCase, Client
-from .models import Note
+import json
+from copy import copy, deepcopy
+
 from accounts.models import User
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.test import Client, TestCase
 from django.urls import reverse
-from rest_framework.test import APITestCase
-from copy import deepcopy, copy
 from hash_generator.generator import generator
+from rest_framework.test import APITestCase
 from s3_storage import s3_storage
-import json
+
+from .models import Note
 
 
 class NoteModelTests(TestCase):

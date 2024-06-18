@@ -1,13 +1,14 @@
-from rest_framework import status
-from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
-from .serializers import UserSerializer, AllUsersSerializer
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .doc_decorators import account_doc, delete_account_doc
 from .models import User
+from .serializers import AllUsersSerializer, UserSerializer
 
 
 @extend_schema(tags=['Accounts'])
