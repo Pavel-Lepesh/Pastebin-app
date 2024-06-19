@@ -1,5 +1,5 @@
 from django.urls import path
-from notes.views import LikePost, LinkAPIView, RecentPosts
+from notes.views import LikePost, LinkAPIView, RecentPosts, PrivateLinkAPI
 
 
 urlpatterns = [
@@ -8,4 +8,5 @@ urlpatterns = [
     path('notes/', LinkAPIView.as_view({'get': 'list', 'post': 'create'}), name='get_create_note'),
     path('notes/usernotes/<int:user_id>', LinkAPIView.as_view({'get': 'public'}, name='get_public_note')),
     path('recent/<int:limit>/', RecentPosts.as_view({'get': 'list'}), name='recent_posts'),
+    path('private_link/<str:hash_link>', PrivateLinkAPI.as_view(), name='private_link')
 ]

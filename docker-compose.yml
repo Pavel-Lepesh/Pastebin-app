@@ -1,4 +1,4 @@
-version: '3.9'
+version: '3.8'
 
 services:
   auth_service:
@@ -92,38 +92,29 @@ services:
     image: memcached:latest
     ports:
       - "11211:11211"
-#  celery:
-#    build:
-#      context: .
-#      dockerfile: pastebin/Dockerfile
-#    command: bash -c "celery -A hash_generator worker -P eventlet --loglevel=info"
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - redis
-#      - web
-#  celery_beat_hash_generator:
-#    build:
-#      context: .
-#      dockerfile: pastebin/Dockerfile
-#    command: bash -c "celery -A hash_generator beat -l info"
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - redis
-#      - web
-#      - celery
-#  celery_beat_autodelete:
-#    build:
-#      context: .
-#      dockerfile: pastebin/Dockerfile
-#    command: bash -c "celery -A notes beat -l info"
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - redis
-#      - web
-#      - celery
+  celery:
+    container_name: celery
+    build:
+      context: .
+      dockerfile: pastebin/Dockerfile
+    command: bash -c "celery -A notes worker -P eventlet --loglevel=info"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - web
+  celery_beat_autodelete:
+    container_name: celery_beat
+    build:
+      context: .
+      dockerfile: pastebin/Dockerfile
+    command: bash -c "celery -A notes beat -l info"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+      - web
+      - celery
 volumes:
   main_data:
   auth_data:

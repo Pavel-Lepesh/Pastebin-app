@@ -9,8 +9,8 @@ from django.shortcuts import get_object_or_404
 from doc_serializers import NotFound404Serializer
 from drf_spectacular.utils import extend_schema
 from hash_generator_connection import hash_generator
-from permissions import IsOwnerOrReadOnly
-from rest_framework import mixins, status
+from permissions import IsOwnerOrReadOnlyPublic, IsOwnerOrReadOnly
+from rest_framework import mixins, status, generics
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
@@ -21,10 +21,49 @@ from s3_storage import s3_storage
 
 from .doc_decorators import (note_meta_doc, notes_doc, recent_post_doc,
                              url_note_doc)
-from .models import Note, UserLikes
+from .models import Note, UserLikes, PrivateLink
 from .serializers import LinkSerializer, NoteSerializer
 
 logger = logging.getLogger(__name__)
+
+
+@extend_schema(tags=['User notes'])
+class PrivateLinkAPI(generics.GenericAPIView):
+    queryset = Note.objects.all()
+    permission_classes = [IsOwnerOrReadOnly,]
+
+    def get_object(self):
+        obj = get_object_or_404(self.get_queryset(), hash_link=self.kwargs['hash_link'])
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get(self, request, hash_link):
+        obj = get_object_or_404(PrivateLink.objects.all(), private_link=hash_link)
+        content = s3_storage.get_object_content(str(obj.note.key_for_s3))
+        return Response({"content": content})
+
+    def post(self, request, hash_link):
+        try:
+            note = self.get_object()
+
+            while True:
+                private_link = uuid.uuid4()
+                objs = PrivateLink.objects.filter(private_link=private_link)
+                if not objs.exists():
+                    break
+
+            PrivateLink.objects.create(private_link=private_link, note=note)
+            return Response({"private_link": private_link})
+        except IntegrityError:
+            obj = PrivateLink.objects.filter(note=note.id)
+            return Response({"private_link": obj[0].private_link})
+
+    def delete(self, request, hash_link):
+        obj = get_object_or_404(
+            PrivateLink.objects.select_related('note').get(note__hash_link=hash_link)
+        )
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(tags=['Base access'])
@@ -95,7 +134,7 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
                      GenericViewSet):
     queryset = Note.objects.all()
     parser_classes = (MultiPartParser, JSONParser)
-    permission_classes = (IsOwnerOrReadOnly,)
+    permission_classes = (IsOwnerOrReadOnlyPublic,)
     lookup_field = 'hash_link'
 
     def get_object(self):
@@ -205,11 +244,7 @@ class LinkAPIView(GenericViewSet,
 
         while True:
             try:
-                # key = caches['redis'].keys('hash_key: *')[0]
-                # hash_link = caches['redis'].get(key)
-                # caches['redis'].delete(key)
                 hash_link = hash_generator.get_hash()
-                print(f"Hash link from main service {hash_link}")
                 serializer = LinkSerializer(data={'user': request.user.id,
                                                   'key_for_s3': key_for_s3,
                                                   'hash_link': hash_link,

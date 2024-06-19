@@ -38,12 +38,6 @@ class UserDeleteAPI(APIView):
 
 
 @api_view(["GET"])
-def get_me(request):
-    h = request.headers
-    return Response({"user": str(request.user)})
-
-
-@api_view(["GET"])
 def get_all_users(request):
     users = User.objects.all()
     serializer = AllUsersSerializer(users, many=True)

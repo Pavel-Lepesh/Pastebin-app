@@ -2,6 +2,14 @@ from django.conf import settings
 from django.db import models
 
 
+class PrivateLink(models.Model):
+    private_link = models.CharField(max_length=200, db_index=True, unique=True)
+    note = models.OneToOneField("Note", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.private_link
+
+
 class UserStars(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     note = models.ForeignKey('Note', on_delete=models.CASCADE)

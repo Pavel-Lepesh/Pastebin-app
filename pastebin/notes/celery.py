@@ -17,6 +17,6 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     'generate_hash': {
         'task': 'notes.tasks.auto_delete_when_expire',
-        'schedule': crontab(),
+        'schedule': crontab(),  # the empty one means every minute
     },
 }

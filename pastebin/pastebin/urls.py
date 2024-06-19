@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
 from notes.views import URLNoteAPIView
 from rest_framework import routers
 
@@ -16,7 +18,9 @@ urlpatterns = [
     path('v1/mystars/', include('user_stars.urls')),
     path('v1/', include('notes.urls')),
     path('/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path("doc/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui")
+    path("doc/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # for local tests
+    # path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh')
 ]
 
 admin.site.site_header = 'Pastebin administration'
