@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @extend_schema(tags=['User notes'])
-class PrivateLinkAPI(generics.GenericAPIView):
+class PrivateLinkAPI(GenericViewSet):
     queryset = Note.objects.all()
     permission_classes = [IsOwnerOrReadOnly,]
 
@@ -37,8 +37,8 @@ class PrivateLinkAPI(generics.GenericAPIView):
         self.check_object_permissions(self.request, obj)
         return obj
 
-    def get(self, request, hash_link):
-        obj = get_object_or_404(PrivateLink.objects.all(), private_link=hash_link)
+    def get(self, request, private_link):
+        obj = get_object_or_404(PrivateLink.objects.all(), private_link=private_link)
         content = s3_storage.get_object_content(str(obj.note.key_for_s3))
         return Response({"content": content})
 
@@ -58,9 +58,10 @@ class PrivateLinkAPI(generics.GenericAPIView):
             obj = PrivateLink.objects.filter(note=note.id)
             return Response({"private_link": obj[0].private_link})
 
-    def delete(self, request, hash_link):
+    def delete(self, request, private_link):
         obj = get_object_or_404(
-            PrivateLink.objects.select_related('note').get(note__hash_link=hash_link)
+            PrivateLink.objects.all(),
+            private_link=private_link
         )
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

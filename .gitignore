@@ -8,8 +8,11 @@
 /requirements.txt
 /.env
 /.env.prod
-/pastebin_authentication_service
-/pastebin_hash_generator
 /rabbitmq
 /pastebin-schema.png
 /README.md
+/rabbitmq.conf
+/pastebin_authentication_service/.env
+/pastebin_authentication_service/.env.test
+/pastebin_hash_generator/.env
+/pastebin_hash_generator/.env.test
