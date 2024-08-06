@@ -8,6 +8,7 @@ from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from doc_serializers import NotFound404Serializer
 from drf_spectacular.utils import extend_schema
+from kafka.errors import KafkaError
 from hash_generator_connection import hash_generator
 from permissions import IsOwnerOrReadOnlyPublic, IsOwnerOrReadOnly
 from rest_framework import mixins, status, generics
@@ -23,8 +24,8 @@ from .doc_decorators import (note_meta_doc, notes_doc, recent_post_doc,
                              url_note_doc)
 from .models import Note, UserLikes, PrivateLink
 from .serializers import LinkSerializer, NoteSerializer
-
-logger = logging.getLogger(__name__)
+from .kafka_producer import kafka_producer
+from loguru import logger
 
 
 @extend_schema(tags=['User notes'])
@@ -251,12 +252,14 @@ class LinkAPIView(GenericViewSet,
                                                   'hash_link': hash_link,
                                                   **request.data})
                 serializer.is_valid(raise_exception=True)
+                kafka_producer.send_note(title=request.data["title"], hash_link=hash_link)
+
                 serializer.save()
                 break
             except IntegrityError:
                 continue  # this error catches hash_link collisions
-            except ClientError as error:
-                # continue
+            except (ClientError, KafkaError) as error:
+                logger.error(error)
                 return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)

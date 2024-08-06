@@ -12,6 +12,8 @@ services:
     depends_on:
       - auth_db
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 81"
+    networks:
+      - pastebin
   auth_db:
     container_name: db_authentication_service
     image: postgres:15
@@ -22,6 +24,8 @@ services:
       - POSTGRES_PASSWORD=1234
       - POSTGRES_DB=pastebin_authentication_service
     command: ["postgres", "-c", "port=5400"]
+    networks:
+      - pastebin
   hash_generator:
     container_name: hash_generator_service
     build:
@@ -35,6 +39,8 @@ services:
       - rabbitmq
       - redis
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 82"
+    networks:
+      - pastebin
   rabbitmq:
     container_name: hash_rabbitmq
     image: rabbitmq:3.13-management
@@ -48,6 +54,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      - pastebin
   pastebin_nginx:
     container_name: nginx
     build:
@@ -56,6 +64,8 @@ services:
       - "80:80"
     depends_on:
       - auth_service
+    networks:
+      - pastebin
   web:
     container_name: main_service
     build:
@@ -71,6 +81,8 @@ services:
       - redis
       - memcached
       - rabbitmq
+    networks:
+      - pastebin
   db:
     container_name: main_db
     image: postgres:15
@@ -82,16 +94,22 @@ services:
      - POSTGRES_DB=pastebin
     ports:
       - "5432:5432"
+    networks:
+      - pastebin
   redis:
     container_name: redis
     image: redis:latest
     ports:
       - "6379:6379"
+    networks:
+      - pastebin
   memcached:
     container_name: memcached
     image: memcached:latest
     ports:
       - "11211:11211"
+    networks:
+      - pastebin
   celery:
     container_name: celery
     build:
@@ -103,6 +121,8 @@ services:
     depends_on:
       - redis
       - web
+    networks:
+      - pastebin
   celery_beat_autodelete:
     container_name: celery_beat
     build:
@@ -115,6 +135,80 @@ services:
       - redis
       - web
       - celery
+    networks:
+      - pastebin
+  search_service:
+    container_name: search_service
+    build:
+      context: ./pastebin_search_service/
+    env_file:
+      - ./pastebin_search_service/.env.test
+    ports:
+      - "83:82"
+    networks:
+      - pastebin
+    depends_on:
+      - elasticsearch
+      - kibana
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    networks:
+      - pastebin
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.3
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - pastebin
+  kafka:
+    image: 'bitnami/kafka:3.4.1'
+    container_name: kafka
+    networks:
+      - pastebin
+    environment:
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_JMX_PORT=9997
+      - KAFKA_JMX_HOSTNAME=kafka
+    ports:
+      - '9094:9094'
+      - '9997:9997'
+      - '9092:9092'
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8082:8080
+    environment:
+      DYNAMIC_CONFIG_ENABLED: true
+    networks:
+      - pastebin
+
 volumes:
   main_data:
   auth_data:
+  esdata:
+    driver: local
+
+networks:
+  pastebin:
+    driver: bridge

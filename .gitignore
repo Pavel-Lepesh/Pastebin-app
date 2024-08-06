@@ -16,3 +16,4 @@
 /pastebin_authentication_service/.env.test
 /pastebin_hash_generator/.env
 /pastebin_hash_generator/.env.test
+!/pastebin_search_service/

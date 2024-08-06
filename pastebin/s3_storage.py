@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class S3Storage:
+    """
+    Class for connection S3-type storage. Allows you to put objects into buckets,
+    check if an object exists, and remove objects from buckets.
+    """
     def __init__(self):
         self.ENDPOINT = os.getenv('ENDPOINT')
         self.ACCESS_KEY = os.getenv('ACCESS_KEY')
