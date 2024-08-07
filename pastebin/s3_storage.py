@@ -1,4 +1,3 @@
-import logging
 import os
 from datetime import datetime
 
@@ -6,9 +5,9 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
-logger = logging.getLogger(__name__)
 
 
 class S3Storage:

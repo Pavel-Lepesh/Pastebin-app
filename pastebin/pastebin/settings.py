@@ -176,7 +176,7 @@ APPEND_SLASH = False
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,
+    "disable_existing_loggers": True,
     "formatters": {
         "default": {
             'format': '[{asctime}] #{levelname:8}{name}:{funcName} - {message}',
@@ -199,18 +199,6 @@ LOGGING = {
     "root": {
         "handlers": ["console"],
         "level": "INFO",
-    },
-    "loggers": {
-        "notes.views": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "hash_generator_connection": {
-            "handlers": ["console", "file"],
-            "level": "INFO",
-            "propagate": False,
-        },
     },
 }
 

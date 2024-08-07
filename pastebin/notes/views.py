@@ -261,5 +261,8 @@ class LinkAPIView(GenericViewSet,
             except (ClientError, KafkaError) as error:
                 logger.error(error)
                 return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as error:
+                logger.error(f"Unexpected error: {error}")
+                return Response({"unexpected error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)

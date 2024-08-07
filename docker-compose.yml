@@ -36,24 +36,9 @@ services:
     ports:
       - "82:82"
     depends_on:
-      - rabbitmq
+      - kafka
       - redis
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 82"
-    networks:
-      - pastebin
-  rabbitmq:
-    container_name: hash_rabbitmq
-    image: rabbitmq:3.13-management
-    hostname: rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
-    volumes:
-      - ./rabbitmq:/var/lib/rabbitmq
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     networks:
       - pastebin
   pastebin_nginx:
@@ -80,7 +65,7 @@ services:
       - db
       - redis
       - memcached
-      - rabbitmq
+      - kafka
     networks:
       - pastebin
   db:
@@ -150,6 +135,7 @@ services:
     depends_on:
       - elasticsearch
       - kibana
+    restart: unless-stopped
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
     container_name: elasticsearch

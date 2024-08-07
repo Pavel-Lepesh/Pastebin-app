@@ -1,22 +1,6 @@
 version: '3.9'
 
 services:
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    hostname: rabbitmq
-    environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
-    volumes:
-      - ./rabbitmq:/var/lib/rabbitmq
-      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
   hash_generator:
     build:
       context: .
@@ -25,7 +9,4 @@ services:
       - .env.test
     ports:
       - "82:82"
-    depends_on:
-      - rabbitmq
-      - redis
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 82"
