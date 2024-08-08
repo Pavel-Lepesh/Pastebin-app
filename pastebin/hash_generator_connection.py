@@ -13,8 +13,7 @@ class HashGenerator:
         self.KAFKA_HOST = os.getenv("KAFKA_HOST")
         self.KAFKA_PORT = os.getenv("KAFKA_PORT")
         self.consumer = KafkaConsumer('hashes',
-                                      bootstrap_servers=[f"{self.KAFKA_HOST}:{self.KAFKA_PORT}"],
-                                      consumer_timeout_ms=5000)
+                                      bootstrap_servers=[f"{self.KAFKA_HOST}:{self.KAFKA_PORT}"])
 
     def get_hash(self) -> str | None:
         hash_ = None
