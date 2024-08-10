@@ -1,6 +1,0 @@
-.env
-.env.test
-.idea
-app/__pycache__*
-log_file.log
-error_logs.log
