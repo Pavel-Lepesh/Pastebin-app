@@ -2,6 +2,7 @@ from accounts.models import User
 from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from loguru import logger
 from notes.models import Note, UserStars
 from rest_framework import mixins, status
 from rest_framework.permissions import IsAuthenticated
@@ -31,6 +32,7 @@ class UserStarsView(mixins.RetrieveModelMixin,
         try:
             self.queryset.create(user_id=request.user.id, note_id=item.id)
         except IntegrityError as error:
+            logger.error(error)
             return Response({'detail': 'This note is already in your collection'},
                             status=status.HTTP_400_BAD_REQUEST)
 

@@ -39,11 +39,11 @@ class S3Storage:
         return presigned_url
 
     def object_exist(self, key_for_s3):
+        """Checking for the object existence, if it doesn't, occurs ClientError and return False"""
         try:
             self.client.head_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
             return True
         except ClientError:
-            # if objects doesn't exist, return false response
             return False
 
     def get_object_content(self, key_for_s3):
@@ -62,9 +62,11 @@ class S3Storage:
             params['Expires'] = ex
 
         self.client.put_object(**params)
+        logger.info(f"Object {key_for_s3} created(updated)")
 
     def delete_object(self, key_for_s3: str):
         self.client.delete_object(Bucket=self.BUCKET_NAME, Key=key_for_s3)
+        logger.info(f"Object {key_for_s3} deleted from S3 storage")
 
     def check_connection(self):
         try:

@@ -1,8 +1,7 @@
 import os
-
-import requests
 import uuid
 
+import requests
 from accounts.models import User
 from botocore.exceptions import ClientError
 from django.core.cache import cache
@@ -10,9 +9,10 @@ from django.db.utils import IntegrityError
 from django.shortcuts import get_object_or_404
 from doc_serializers import NotFound404Serializer
 from drf_spectacular.utils import extend_schema
-from kafka.errors import KafkaError
 from hash_generator_connection import hash_generator
-from permissions import IsOwnerOrReadOnlyPublic, IsOwnerOrReadOnly
+from kafka.errors import KafkaError
+from loguru import logger
+from permissions import IsOwnerOrReadOnly, IsOwnerOrReadOnlyPublic
 from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -24,10 +24,9 @@ from s3_storage import s3_storage
 
 from .doc_decorators import (note_meta_doc, notes_doc, recent_post_doc,
                              url_note_doc)
-from .models import Note, UserLikes, PrivateLink
-from .serializers import LinkSerializer, NoteSerializer
 from .kafka_producer import kafka_producer
-from loguru import logger
+from .models import Note, PrivateLink, UserLikes
+from .serializers import LinkSerializer, NoteSerializer
 
 
 @extend_schema(tags=['User notes'])

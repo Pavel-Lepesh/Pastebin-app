@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
-
 from notes.views import URLNoteAPIView
 from rest_framework import routers
+from rest_framework_simplejwt.views import (TokenObtainPairView,  # noqa
+                                            TokenRefreshView, TokenVerifyView)
 
 router = routers.SimpleRouter()
 router.register(r'', URLNoteAPIView)

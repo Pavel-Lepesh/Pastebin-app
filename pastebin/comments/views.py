@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
+from loguru import logger
 from notes.models import Note
 from permissions import IsOwnerOrReadOnlyComments
 from rest_framework import mixins, status
@@ -58,38 +59,41 @@ class NoteComments(mixins.ListModelMixin,
 
     @action(detail=True, methods=['post'])
     def rating(self, request, hash_link=None, note_comment_id=None, action_=None, cancel=None):
-        comment = self.get_object()
-        user_rating = UserCommentRating.objects.filter(user=request.user, comment=comment)
+        try:
+            comment = self.get_object()
+            user_rating = UserCommentRating.objects.filter(user=request.user, comment=comment)
 
-        if not cancel:
-            if user_rating.exists():
-                return Response({'detail': 'You have already rated the comment'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            match action_:
-                case 'like':
-                    comment.meta_data.likes += 1
-                case 'dislike':
-                    comment.meta_data.dislikes += 1
-            UserCommentRating.objects.create(user=request.user,
-                                             comment=comment,
-                                             rating=action_)
-        else:
-            if not user_rating.exists():
-                return Response({'detail': 'You have\'t rated the comment yet'},
-                                status=status.HTTP_400_BAD_REQUEST)
+            if not cancel:
+                if user_rating.exists():
+                    return Response({'detail': 'You have already rated the comment'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                match action_:
+                    case 'like':
+                        comment.meta_data.likes += 1
+                    case 'dislike':
+                        comment.meta_data.dislikes += 1
+                UserCommentRating.objects.create(user=request.user,
+                                                 comment=comment,
+                                                 rating=action_)
+            else:
+                if not user_rating.exists():
+                    return Response({'detail': 'You have\'t rated the comment yet'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            accurate_rating: str = get_object_or_404(user_rating, user=request.user, comment=comment).rating
-            if accurate_rating != action_:
-                return Response({'detail': 'You cannot cancel a rating you did not give'},
-                                status=status.HTTP_400_BAD_REQUEST)
+                accurate_rating: str = get_object_or_404(user_rating, user=request.user, comment=comment).rating
+                if accurate_rating != action_:
+                    return Response({'detail': 'You cannot cancel a rating you did not give'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            match action_:
-                case 'like':
-                    comment.meta_data.likes -= 1
-                case 'dislike':
-                    comment.meta_data.dislikes -= 1
-            user_rating.delete()
+                match action_:
+                    case 'like':
+                        comment.meta_data.likes -= 1
+                    case 'dislike':
+                        comment.meta_data.dislikes -= 1
+                user_rating.delete()
 
-        comment.meta_data.save()
-        return Response({'likes': comment.meta_data.likes,
-                         'dislikes': comment.meta_data.dislikes})
+            comment.meta_data.save()
+            return Response({'likes': comment.meta_data.likes,
+                             'dislikes': comment.meta_data.dislikes})
+        except Exception as error:
+            logger.error(error)

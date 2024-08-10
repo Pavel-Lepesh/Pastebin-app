@@ -1,8 +1,8 @@
-from kafka import KafkaProducer
-from dotenv import load_dotenv
 import os
-from loguru import logger
 
+from dotenv import load_dotenv
+from kafka import KafkaProducer
+from loguru import logger
 
 load_dotenv()
 

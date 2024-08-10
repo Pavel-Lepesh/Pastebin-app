@@ -1,6 +1,5 @@
 from django.urls import path
-from notes.views import LikePost, LinkAPIView, RecentPosts, PrivateLinkAPI
-
+from notes.views import LikePost, LinkAPIView, PrivateLinkAPI, RecentPosts
 
 urlpatterns = [
     path('rating/<str:hash_link>', LikePost.as_view({'get': 'retrieve', 'post': 'like'}), name='like_or_get_note'),

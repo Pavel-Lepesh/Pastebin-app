@@ -1,9 +1,9 @@
 import os
 from time import sleep
-from dotenv import load_dotenv
-from loguru import logger
-from kafka import KafkaConsumer
 
+from dotenv import load_dotenv
+from kafka import KafkaConsumer
+from loguru import logger
 
 load_dotenv()
 

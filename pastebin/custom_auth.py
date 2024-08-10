@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from jose import JWTError, jwt
 from rest_framework import authentication, exceptions
 
-
 load_dotenv()
 
 

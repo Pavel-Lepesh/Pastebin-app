@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from loguru import logger
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -24,6 +25,7 @@ class UserCreateAPI(APIView):
             response = Response(serializer.validated_data, status=status.HTTP_201_CREATED)
             return response
         except Exception as error:
+            logger.error(error)
             return Response({"error": error}, status=400)
 
 
