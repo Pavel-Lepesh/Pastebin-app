@@ -1,4 +1,6 @@
-import logging
+import os
+
+import requests
 import uuid
 
 from accounts.models import User
@@ -11,7 +13,7 @@ from drf_spectacular.utils import extend_schema
 from kafka.errors import KafkaError
 from hash_generator_connection import hash_generator
 from permissions import IsOwnerOrReadOnlyPublic, IsOwnerOrReadOnly
-from rest_framework import mixins, status, generics
+from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
@@ -186,16 +188,28 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         return Response(serializer.validated_data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        item = self.get_object()
-        key_for_s3 = str(item.key_for_s3)
-        s3_storage.delete_object(key_for_s3)
+        try:
+            item = self.get_object()
+            key_for_s3 = str(item.key_for_s3)
+            s3_storage.delete_object(key_for_s3)
 
-        if cache.has_key(item.hash_link):
-            cache.delete(item.hash_link)
+            if cache.has_key(item.hash_link):
+                cache.delete(item.hash_link)
 
-        self.perform_destroy(item)
+            response_search_service = requests.delete(
+                f"http://{os.getenv('SEARCH_HOST')}:{os.getenv('SEARCH_PORT')}/v1/search/delete_doc/{item.hash_link}"
+            )
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+            if response_search_service.status_code == 204:
+                self.perform_destroy(item)
+                logger.info(f"Note {item.hash_link} deleted correctly")
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            else:
+                logger.info("Error was occurred during deleting a note")
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as error:
+            logger.error(error)
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @extend_schema(tags=['User notes'])
