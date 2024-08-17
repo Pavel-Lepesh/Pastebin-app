@@ -170,7 +170,19 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
                                                          'hash_link': item.hash_link,
                                                          **request.data})
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+
+        response_search_service = requests.put(
+            f"http://{os.getenv('SEARCH_HOST')}:{os.getenv('SEARCH_PORT')}/v1/search/update_doc/{item.hash_link}?title={request.data['title']}"
+        )
+        if response_search_service.status_code == 201:
+            self.perform_update(serializer)
+            logger.info(f"Document {item.hash_link} updated successfully")
+        elif response_search_service.status_code == 404:
+            logger.error(f"Document {item.hash_link} not found")
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        else:
+            logger.error(f"Error during handling document {item.hash_link}")
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if cache.has_key(item.hash_link):
             cache.set(item.hash_link, request.data['content'])
@@ -180,7 +192,20 @@ class URLNoteAPIView(mixins.RetrieveModelMixin,
         item = self.get_object()
         serializer = LinkSerializer(instance=item, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+
+        response_search_service = requests.put(
+            f"http://{os.getenv('SEARCH_HOST')}:{os.getenv('SEARCH_PORT')}/v1/search/update_doc/{item.hash_link}?title={request.data['title']}"
+        )
+
+        if response_search_service.status_code == 201:
+            self.perform_update(serializer)
+            logger.info(f"Document {item.hash_link} updated successfully")
+        elif response_search_service.status_code == 404:
+            logger.error(f"Document {item.hash_link} not found")
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        else:
+            logger.error(f"Error during handling document {item.hash_link}")
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if cache.has_key(item.hash_link):
             cache.set(item.hash_link, request.data['content'])
