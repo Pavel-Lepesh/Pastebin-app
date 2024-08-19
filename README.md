@@ -2,53 +2,54 @@
 ___
 <a href="https://www.postman.com/pavellepesh/workspace/pastebin/collection/26749338-970d2184-c825-4347-a8fe-32fa70906536"><img src="https://img.shields.io/badge/Postman-pastebin collection-orange"></a>
 
-## Описание 
+## Description
 ___
-Этот проект представляет собой веб-приложение, созданное для публикации текстовых фрагментов. Фрагменты могут иметь как приватный доступ, так и публичный. Дополнительно имеется возможность выбора времени жизни вашего фрагмента.
+This project is a web application designed for publishing text snippets. Snippets can have either private or public access. Additionally, there is an option to set the lifespan of your snippet.
 
-## Архитектура приложения
+## Application Architecture
 ___
-Ниже приведена графическая схема архитектуры приложения:
-![Схема архитектуры приложения](pastebin-scheme.jpg)
+Below is a graphical diagram of the application architecture:
+![Application Architecture Diagram](pastebin-scheme.jpg)
 
-### Составляющие приложения:
-* **Основной сервис**: Написан на Django/Django Rest Framework. Здесь происходит большая часть взаимодействий между сервисами.
-* **[Сервис поиска](https://github.com/Pavel-Lepesh/Pastebin-search-service)**: Написан на FastAPI. Отвечает за реализацию поиска записей. Построен на взаимодействии с ElasticSearch.
-* **[Сервис аутентификации](https://github.com/Pavel-Lepesh/Pastebin-authentication-service)**: Написан на FastAPI. Используется для регистрации пользователей и их аутентификации и авторизации посредством выдачи JWT токенов. Основное взаимодействие происходит за счет автоматических подзапросов к этому сервису через nginx в момент обычных запросов пользователей к основному приложению.
-* **Nginx**: Выполняет роль маршрутизатора запросов и распределителя нагрузки на сервис. Также отвечает за взаимодействие с сервисом аутентификации.
-* **[Сервис генерации хэшей](https://github.com/Pavel-Lepesh/Pastebin-hash-generator)**: Написан на FastAPI. Используется для получения хэш-ссылок, которые в дальнейшем будут использоваться в URL-адресах для доступа к записям пользователей.
-* **Redis**: Используется в качестве временного хранилища хэш-ссылок для быстрого доступа к ним из Kafka.
-* **Kafka**: Через Kafka происходит взаимодействие между основным сервисом и сервисом поиска, посредством передачи документов в сервис поиска для последующей индексации в ElasticSearch. Помимо этого, тут происходит передача url-подобных хэшей основному сервису от генератора хэшей. В docker-compose предусмотрен отдельный контейнер kafka-ui, который поднимает клиент с графическим интерфейсом для удобной визуализации взаимодействий в Kafka.
-* **ElasticSearch**: В ElasticSearch индексируются документы записей для возможности поиска по ним.
-* **Kibana**: Инструмент визуализации и графического пользовательского интерфейса для удобной работы с ElasticSearch.
-* **PostgreSQL**: Основная база данных приложения.
-* **Memcached**: Кэш, который используется для хранения популярных записей пользователей.
-* **S3 Storage**: Хранилище, в котором сохраняются все записи пользователей.
-* **Celery**: Асинхронная очередь задач, через которую происходит удаление мета-данных устаревших записей. Опционально, может также использоваться для удаления записей из S3 хранилища, если оно не поддерживает автоматическое удаление записей по истечении срока жизни фрагментов.
+### Application Components:
+* **Main Service**: Written in Django/Django Rest Framework. It handles all operations with notes, comments and user stars.
+* **[Search Service](https://github.com/Pavel-Lepesh/Pastebin-search-service)**: Written in FastAPI. Responsible for implementing record search. Built on interactions with ElasticSearch.
+* **[Authentication Service](https://github.com/Pavel-Lepesh/Pastebin-authentication-service)**: Written in FastAPI. Used for user registration, authentication, and authorization through the issuance of JWT tokens. The main interaction occurs through automatic sub-requests to this service via Nginx when users make regular requests to the main application.
+* **Nginx**: Acts as a request router and load balancer. Also responsible for interacting with the authentication service.
+* **[Hash Generation Service](https://github.com/Pavel-Lepesh/Pastebin-hash-generator)**: Written in FastAPI. Used to generate hash links that will later be used in URLs to access user records.
+* **Redis**: Used as a temporary storage for hash links for quick access from Kafka.
+* **Kafka**: Kafka facilitates interactions between the main service and the search service by transmitting documents to the search service for subsequent indexing in ElasticSearch. Additionally, it handles the transmission of URL-like hashes from the hash generator to the main service. The docker-compose file includes a separate kafka-ui container that launches a client with a graphical interface for convenient visualization of interactions in Kafka.
+* **ElasticSearch**: Documents are indexed in ElasticSearch to enable searching through them.
+* **Kibana**: A visualization tool and graphical user interface for convenient interaction with ElasticSearch.
+* **PostgreSQL**: The main database of the application.
+* **Memcached**: A cache used to store popular user records.
+* **S3 Storage**: The storage where all user records are saved.
+* **Celery**: An asynchronous task queue used for deleting metadata of expired records. Optionally, it can also be used to delete records from S3 storage if the storage does not support automatic deletion of records after their expiration.
 
-## Особенности работы приложения
+## Application Features
 ___
-Приложение разработано по принципу микросервисной архитектуры и свободно для масштабирования. [Генератор хешей](https://github.com/Pavel-Lepesh/Pastebin-hash-generator) и [Сервис аутентификации](https://github.com/Pavel-Lepesh/Pastebin-authentication-service) являются универсальными приложениями, которые также могут использоваться в других проектах.
+The application is developed based on a microservice architecture and is open to scaling. The [Hash Generator](https://github.com/Pavel-Lepesh/Pastebin-hash-generator) and [Authentication Service](https://github.com/Pavel-Lepesh/Pastebin-authentication-service) are universal applications that can also be used in other projects.
 
-Пользователям предоставляется доступ к операциям создания и управления своими записями, создания приватных ссылок на записи, а также для просмотра популярных публичных записей других пользователей. Есть возможность добавления понравившихся записей к себе в "My stars". Реализованы системы комментариев и рейтинга записей и комментариев.
+Users have access to operations for creating and managing their records, creating private links to records, and viewing popular public records of other users. There is an option to add favorite records to the "My stars" section. The system also includes comments and rating features for records and comments.
 
-Документация API приложения доступна [здесь](https://www.postman.com/pavellepesh/workspace/pastebin/collection/26749338-970d2184-c825-4347-a8fe-32fa70906536).
+The API documentation is available [here](https://www.postman.com/pavellepesh/workspace/pastebin/collection/26749338-970d2184-c825-4347-a8fe-32fa70906536).
 
-## Установка и запуск с помощью Docker
+## Installation and Launch using Docker
 ___
-1. Клонируйте репозиторий и настройте файлы .env под вашу конфигурацию:
+1. Clone the repository and configure the .env files according to your setup:
     ```bash
     git clone https://github.com/Pavel-Lepesh/Pastebin-app.git
     ```
-2. Запустите Docker и соберите образы (внесите изменения в файл docker-compose.yml, учитывающие вашу конфигурацию):
+2. Start Docker and build the images (make changes to the docker-compose.yml file to match your setup):
     ```bash
     docker-compose -f docker-compose.yml build
     ```
-3. Запустите контейнеры следующий командой:
+3. Launch the containers with the following command:
     ```bash
     docker-compose -f docker-compose.yml up -d
     ```
-4. Используйте API-команды, находящиеся  [здесь](https://www.postman.com/pavellepesh/workspace/pastebin/collection/26749338-970d2184-c825-4347-a8fe-32fa70906536). Перед использованием настройте переменные окружения там же.
-## Лицензия
+4. Use the API commands available [here](https://www.postman.com/pavellepesh/workspace/pastebin/collection/26749338-970d2184-c825-4347-a8fe-32fa70906536). Set up the environment variables there before use.
+
+## License
 ___
-Этот проект распространяется под лицензией MIT. Подробности см. в файле [LICENSE](LICENSE).
+This project is distributed under the MIT License. See the [LICENSE](LICENSE) file for details.
