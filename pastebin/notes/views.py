@@ -273,6 +273,7 @@ class LinkAPIView(GenericViewSet,
 
     def create(self, request, *args, **kwargs):
         limit_kb = 10 * 1024
+        attempts_limit = 10
 
         if len(request.data['content'].encode('utf-8')) > limit_kb:
             return Response('Content data is too big.', status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
@@ -282,7 +283,7 @@ class LinkAPIView(GenericViewSet,
         while s3_storage.object_exist(key_for_s3):
             key_for_s3 = str(uuid.uuid4())
 
-        while True:
+        for attempt in range(attempts_limit):
             try:
                 hash_link = hash_generator.get_hash()
                 serializer = LinkSerializer(data={'user': request.user.id,
@@ -294,8 +295,13 @@ class LinkAPIView(GenericViewSet,
 
                 serializer.save()
                 break
-            except IntegrityError:
-                continue  # this error catches hash_link collisions
+            except IntegrityError:  # this error catches hash_link collisions
+                if attempt == attempts_limit - 1:
+                    logger.error("Cannot reach unique hash value")
+                    return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                logger.warning("Reaching unique hash link failed. Launching new attempt...")
+                continue
             except (ClientError, KafkaError) as error:
                 logger.error(error)
                 return Response({"error": error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
